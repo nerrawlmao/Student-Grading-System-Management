@@ -1005,6 +1005,18 @@ void manageCourse(){
             
             strcpy(currentLocation, currentLocationHolder);
         }
+        
+        snprintf(currentLocation, X, "%s/Grading System Settings", courseLocation);
+
+        FILE *F1 = fopen(currentLocation, "r");
+
+        if (F1 == NULL) {
+            FILE *F2 = fopen(currentLocation, "a");
+            fprintf(F2, "10\n10\n10\n10\n30\n30\n");
+            fclose(F2);
+        } else {
+            fclose(F1);
+        }
 
         newPage();
     }
@@ -2098,7 +2110,7 @@ void viewGradingSystemSettings() {
         returned = 0;
     } else {
         newPage();
-        snprintf(currentLocation, 200, "%s/Grading System Settings", courseLocation);
+        snprintf(currentLocation, X, "%s/Grading System Settings", courseLocation);
 
         FILE *F1 = fopen(currentLocation, "r");
 
