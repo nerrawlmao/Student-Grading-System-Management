@@ -2,11 +2,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
-#include <direct.h>
+#include <direct.h>     
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define X 200
+#define X 256
 
 /* =================================================================================================================
                                                     PROTOTYPES
@@ -15,50 +15,51 @@
 // GENERAL FUNCTIONS
 void newPage();
 void enterYourChoice();
-int hasFiles(char *dirPath);
-int directoryExists(const char *currentLocation);
+void enterYourChoice0ToCancel();
+void line();
+void line1();
+void invalidInput();
+int hasFiles(char *dirLoc);
+int directoryExists(const char *curLoc);
 char** directoryChoices(char **buffer);
 void directoryList();
-void removeDirectory(char path[255]); 
+void removeDirectory(char path[X]); 
+void addFolderMain();
 void addFolder();
 void renameFolderMain();
 void renameFolder();
+void removeFolderMain();
 void removeFolder();
-
 //  PROGRAM
 void viewProgram();
 void addProgram();
 void renameProgram();
 void removeProgram();
-
 // YEAR
 void viewYearLevel();
 void addYearLevel();
 void renameYearLevel();
 void removeYearLevel();
-
 // SECTION
 void viewSection();
 void addSection();
 void renameSection();
 void removeSection();
-
 // COURSE
 void viewCourse();
 void addCourse();
 void renameCourse();
 void removeCourse();
 void manageCourse();
-
 // ASSESSMENT
 void viewAssessment();
 void addAssessment();
 void editAssessment();
 void removeAssessment();
-
 // STUDENT 
 void viewStudent();
 void addStudent();
+void removeStudent();
 void viewStudentRecord();
 void viewStudentInfo();
 void viewStudentAssessment();
@@ -66,28 +67,20 @@ void addStudentAssessment();
 void removeStudentAssessment();
 void viewStudentEnrollmentInfo();
 void viewStudentGradeCourse();
-void viewStudentGradeSummary();
-
+void viewStudentCurrentGrade();
 // GRADING SYSTEM SETTINGS
 void viewGradingSystemSettings();
 void editGradingSystemSettings();
 
 // GLOBAL VARIABLES
-int choice;
-char currentLocation[X] = "OLFU Valenzuela";
-char garbage[X];
-int returned = 0;
-char currentLocationHolder[X];
-char fileLocationToBeRemove[X];
-char *buffer[X];
-char backToProgram[X];
-char backToYearLevel[X];
-char backToSection[X];
-char backToCourse[X];
-char assessmentName[X];
-int assessmentOverscore;
-char courseLocation[X];
+int choice = 0, error = 0, directoryCount = 0, cancelled = 0, returned = 0, assessmentOverscore = 0;
+char itemLocation[X], itemFolder[X], choosenToBeRemove[X], currentLocation[X] = "OLFU Valenzuela", garbage[X], mode[X], currentLocationHolder[X], fileLocationToBeRemove[X], *buffer[X], backToProgram[X], backToYearLevel[X], backToSection[X], backToCourse[X], assessmentName[X], courseLocation[X];
 const char assessments[][X] = {"Activities", "Assignments", "Exams", "Performance Tasks", "Projects", "Quizzes"};
+const char assessmentsSingular[][X] = {"Activity", "Assignment", "Exam", "Performance Task", "Project", "Quiz"};
+
+// STYLES
+char B[] = "\033[1m", b[] = "\033[1;34m", r[] = "\033[1;31m", g[] = "\033[1;32m", c[] = "\033[0m";
+char borderColor[] = "\033[0;37m";
 
 /* =================================================================================================================
                                                         MAIN
@@ -98,13 +91,12 @@ int main(){
     
     while(1){
         returned = 0;
-        printf("  \033[1mPlease choose an option:\033[0m\n\n");
-
-        printf("    [1] View programs\n");
-        printf("    [2] Add program\n");
-        printf("    [3] Rename program\n");
-        printf("    [4] Remove program\n");
-        printf("    [0] Exit\n");
+        printf("    %sChoose an option:%s\n\n", B, c );
+        printf("      [1] View Programs\n");
+        printf("      [2] Add Program\n");
+        printf("      [3] Rename Program\n");
+        printf("      [4] Remove Program\n");
+        printf("      [0] Exit\n");
         enterYourChoice();
         
         switch(choice){
@@ -122,13 +114,11 @@ int main(){
                 break;
             case 0:
                 newPage();
-                printf("               \033[1;32mProgram exited successfully.\033[0m\n\n");
-                printf("===========================================================\n\n");
+                printf("                     %sProgram exited successfully.%s\n\n", g,c);
+                line();
                 exit(0);
             default: 
-                newPage();
-                printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-                printf("===========================================================\n\n");
+                invalidInput();
         }
     }
 }
@@ -139,14 +129,14 @@ int main(){
 
 void newPage(){
     system("cls");
-    printf("\n===========================================================\n");
-    printf("        \033[1;34mEduTrack: Student Grading System Management\033[0m\n");
-    printf("===========================================================\n\n");
+    line1();
+    printf("                   %sStudent Grading System Management%s\n", b, c);
+    line();
 }
 
 void enterYourChoice(){
-    printf("\n===========================================================\n");
-    printf("Enter your choice: ");
+    line1();
+    printf("%sEnter your choice:%s ", B, c);
     if (scanf("%d", &choice) == 1) {
     } else {
         scanf(" %[^\n]", garbage); 
@@ -154,8 +144,33 @@ void enterYourChoice(){
     }
 }
 
-int hasFiles(char *directoryLocation) {
-    DIR *dir = opendir(directoryLocation);
+void enterYourChoice0ToCancel(){
+    line1();
+    printf("%sEnter your choice (0 to cancel):%s ", B, c);
+    if (scanf("%d", &choice) == 1) {
+    } else {
+        scanf(" %[^\n]", garbage); 
+        choice = -1;
+        return;
+    }
+}
+
+void line(){
+    printf("%s=======================================================================%s\n\n", borderColor, c);
+}
+
+void line1(){
+    printf("\n%s=======================================================================%s\n", borderColor, c);
+}
+
+void invalidInput(){
+    newPage();
+    printf("                    %sInvalid input. Please try again.%s\n\n", r, c);
+    line();
+}
+
+int hasFiles(char *dirLoc) {
+    DIR *dir = opendir(dirLoc);
 
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
@@ -164,16 +179,17 @@ int hasFiles(char *directoryLocation) {
             return 1;
         }
     }
-
-    return 0;  // No files found
+    closedir(dir);
+    return 0;
 }
 
-int directoryExists(const char *currentLocation) {
-    DIR *dir = opendir(currentLocation);
+int directoryExists(const char *curLoc) {
+    DIR *dir = opendir(curLoc);
     if (dir) {
         closedir(dir);
         return 1;
     }
+    closedir(dir);
     return 0;
 }
 
@@ -181,15 +197,16 @@ char** directoryChoices(char **buffer){
     DIR *dir;
     struct dirent *entry;
     int i = 1;
+    directoryCount = 0;
 
     dir = opendir(currentLocation);
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_name[0] != '.') {
             buffer[i - 1] = strdup(entry->d_name);
-            printf("    [%d] %s\n", i, entry->d_name); 
+            printf("      [%d] %s\n", i, entry->d_name); 
             i++;
+            directoryCount++;
         }
-        
     }
     closedir(dir);
     return buffer;
@@ -202,7 +219,7 @@ void directoryList(){
 
     while ((entry = readdir(dir)) != NULL ) {
         if (entry->d_name[0] != '.'){
-            printf("    - %s\n", entry->d_name);
+            printf("      - %s\n", entry->d_name);
         }
     }
     printf("\n");
@@ -214,13 +231,12 @@ void removeDirectory(char locationToBeRemove[X]) {
     DIR *dir = opendir(locationToBeRemove);
     
     while ((entry = readdir(dir)) != NULL) {
-        char fileLoc[500];
+        char fileLoc[X];
 
         if (entry->d_name[0] == '.') {
             continue;
         }
-
-        snprintf(fileLoc, 500, "%s/%s", locationToBeRemove, entry->d_name);
+        snprintf(fileLoc, X, "%s/%s", locationToBeRemove, entry->d_name);
 
         struct stat statbuf;
         if (stat(fileLoc, &statbuf) == 0) {
@@ -230,196 +246,253 @@ void removeDirectory(char locationToBeRemove[X]) {
                 remove(fileLoc);
             }
         }
-
     }
-
     closedir(dir);
     rmdir(locationToBeRemove);
-    
 }
 
-void addFolder(){
+void addFolderMain(){
     char folderName[X];
     char folderLocation[X];
+
     newPage();
-    printf("--------------------- \033[3mAdding an item\033[0m ----------------------\n\n");
-    printf("===========================================================\n");        
-    printf("Enter name (0 to cancel): ");
+    printf("                 %s------- %sAdding a new %s%s %s-------%s\n", B, b, itemLocation, c, B, c);
+    line1();       
+    printf("%sEnter name (0 to cancel): %s", B, c);
     scanf(" %[^\n]", folderName);
 
     if (strcmp(folderName, "0") == 0){
         newPage();
-        printf("            \033[1;31mAdding an item has been cancelled.\033[0m\n\n");
-        printf("===========================================================\n\n");
+        printf("                 %sAdding a %s has been cancelled.%s\n\n",r, itemLocation, c);
+        line();
         return;
     } else {
         snprintf(folderLocation, X, "%s/%s", currentLocation, folderName);
         mkdir(folderLocation);
         newPage();
-        printf("  \033[1;32m'%s' is successfully added.\033[0m\n\n", folderName);
-        printf("===========================================================\n\n");
+        printf("    %sThe %s '%s' was successfully added.%s\n\n", g,  itemLocation, folderName, c);
+        line();
     }
 }
 
-void renameFolderMain(){
+void addFolder(){
+    newPage();
+    printf("    %sChoose the %s%s of %s%s%s you want to %sadd%s%s:%s\n\n", B, b, itemFolder, itemLocation, c, B, b, c, B, c);
+
+    directoryChoices(buffer);
+    enterYourChoice();
+
+    snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
+
+    if(!directoryExists(currentLocation)){
+        choice = -1;
+    }
+    strcpy(currentLocation, currentLocationHolder);
+
+    if (choice == -1){
+        invalidInput();
+        returned = 1;
+        error = 1;
+        return;
+    }
+    snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
+
+    addFolderMain();
+}
+
+void renameFolderMain(){    
     char newName[X];
     char oldLocation[X];
     char newLocation[X];
+
     newPage();
-    printf("  \033[1mPlease choose an option:\033[0m\n\n");
+    printf("    %sChoose the %s%s%s %syou want to %srename%s%s:%s\n\n", B, b, itemLocation, c,B, b, c, B ,c);
     directoryChoices(buffer);
-    printf("\n===========================================================\n");
+    line1();
     
-    printf("Enter to be rename (0 to cancel): ");
+    printf("%sEnter your choice (0 to cancel): %s", B, c);
     if(scanf("%d", &choice) == 1){
     } else {
         scanf(" %[^\n]", garbage);
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
+        invalidInput();
         return;
     }
     if (choice == 0){
         newPage();
+        printf("                %sRenaming a %s has been cancelled.%s\n\n",r, itemLocation, c);
+        line();
         return;
     }
-
+    if (choice > directoryCount || choice < 1){
+        invalidInput();
+        return;
+    }
     newPage();
-    printf("------------------- \033[3mRenaming an item\033[0m --------------------\n\n");
-    printf("===========================================================\n");
-    printf("Enter the new name: ");
+    printf("                  %s------- %sRenaming a %s%s %s-------%s\n", B, b, itemLocation, c, B, c);
+    line1();
+    printf("%sEnter the new name (0 to cancel): %s",B, c);
     scanf(" %[^\n]", newName);
-
+    if (strcmp(newName, "0") == 0){
+        newPage();
+        printf("                %sRenaming a %s has been cancelled.%s\n\n",r, itemLocation, c);
+        line();
+        return;
+    }
     snprintf(oldLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
     snprintf(newLocation, X, "%s/%s", currentLocation, newName);
     newPage();
+
     rename(oldLocation, newLocation);
-    printf("  \033[1;32m'%s' is successfully renamed to '%s'.\033[0m\n", buffer[choice - 1], newName);
-    printf("\n===========================================================\n\n");
+    printf("    %sThe %s '%s' successfully renamed to '%s'.%s\n\n", g, itemLocation, buffer[choice - 1], newName, c);
+    line();
 }
 
 void renameFolder(){
-    char newName[X];
-    char oldLocation[X];
-    char newLocation[X];
-    printf("  \033[1mEnter the location of the item to be renamed:\033[0m\n\n");
+    printf("    %sChoose the %s%s of %s%s %syou want to %srename%s%s:%s\n\n", B,b, itemFolder, itemLocation, c, B, b, c, B, c);
     directoryChoices(buffer);
-    printf("\n===========================================================\n");
-    
-    printf("Enter your choice (0 to cancel): ");
+    line1();
+    printf("%sEnter your choice (0 to cancel): %s", B, c);
     if(scanf("%d", &choice) == 1){
     } else {
         scanf(" %[^\n]", garbage);
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
+        invalidInput();
         return;
     }
     if (choice == 0){
         newPage();
+        return;
+    }
+    if (choice > directoryCount){
+        invalidInput();
         return;
     }
     snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
     if(!hasFiles(currentLocation)){
         newPage();
-        printf("           \033[1;31mNo items available. Please add first.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        snprintf(currentLocation, X, "%s", currentLocationHolder);
+        printf("                 %sNo %s available. Please add first.%s\n\n", r, itemLocation, c);
+        line();
+        strcpy(currentLocation, currentLocationHolder);
         returned = 1;
         return;
     }
     renameFolderMain();
 }
 
-void removeFolder(){
-    snprintf(currentLocationHolder, 255, "%s", currentLocation);
-    char choosenToBeRemove[255];
-    printf("Enter your choice (0 to cancel): ");
-
-    if(scanf("%d", &choice) == 1){
-    } else {
-        scanf(" %[^\n]", garbage);
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        return;
-    }
-
-    if (choice == 0){
-        newPage();
-        return;
-    }
-
-    snprintf(currentLocation, 255, "%s/%s", currentLocation, buffer[choice-1]);
-
-    if(!hasFiles(currentLocation)){
-        newPage();
-        printf("           \033[1;31mNo items available. Please add first.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        snprintf(currentLocation, 255, "%s", currentLocationHolder);
-        returned = 1;
-        snprintf(currentLocation, 255, "%s", currentLocation);
-        return;
-    }
-    
+void removeFolderMain(){
+    char temporary[X];
+    strcpy(temporary, currentLocation);
     newPage();
-    printf("  \033[1mChoose the item to be remove:\033[0m\n\n");
+    printf("    %sChoose the %s%s%s%s you want to %sremove%s%s:%s\n\n", B, b, itemLocation, c, B, b, c, B, c);
     directoryChoices(buffer);
-    printf("\n===========================================================\n");
-    printf("Enter your choice (0 to cancel): ");
+    line1();
+    printf("%sEnter your choice (0 to cancel):%s ", B,c);
     
     if(scanf("%d", &choice) == 1){
     } else {
         scanf(" %[^\n]", garbage);
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        snprintf(currentLocation, 255, "%s", currentLocationHolder);
+        invalidInput();
+        strcpy(currentLocation, currentLocationHolder);
         return;
     }
-
     if (choice == 0){
         newPage();
-        snprintf(currentLocation, 255, "%s", currentLocationHolder);
+        printf("                %sRemoving a %s has been cancelled.%s\n\n",r, itemLocation, c);
+        line();
+        strcpy(currentLocation, currentLocationHolder);
         return;
     }
-
-    snprintf(fileLocationToBeRemove, 255, "%s/%s", currentLocation, buffer[choice-1]);
+    if (choice > directoryCount || choice < 1){
+        invalidInput();
+        return;
+    }
+    snprintf(fileLocationToBeRemove, X, "%s/%s", currentLocation, buffer[choice-1]);
     strcpy(choosenToBeRemove, buffer[choice-1]);
+    
     newPage();
-    printf("  \033[1mPlease choose an option:\033[0m\n\n");
-    printf("   [1] Yes\n");
-    printf("   [2] No\n");
-    printf("\n  \033[1;31mAre you sure you want to remove the '%s'?\n  This action cannot be undone.\033[0m\n", buffer[choice -1]);
-    printf("\n===========================================================\n");
-    printf("Enter your choice (0 to cancel): ");
+    printf("    %sRemove the %s '%s'?\n    This action cannot be undone.%s\n\n", r, itemLocation, buffer[choice -1], c);
+    line();
+    printf("    %sChoose an option:%s\n\n", B,c);
+    printf("      [1] Yes        [0] No\n");
+    line1();
+    printf("%sEnter your choice: %s", B,c);
+
     if(scanf("%d", &choice) == 1){
         if (choice == 0){
             newPage();
+            printf("                %sRemoving a %s has been cancelled.%s\n\n",r, itemLocation, c);
+            line();
         } else if (choice == 1){
             removeDirectory(fileLocationToBeRemove); 
             newPage();
-            printf("  \033[1;32m'%s' is successfully removed.\033[0m\n", choosenToBeRemove);
-            printf("\n===========================================================\n\n");
-            
-        } else if ( choice == 2){
-            newPage();
-            printf("         \033[1;32mThe removal of '%s' has been cancelled.\033[0m\n", choosenToBeRemove);
-            printf("\n===========================================================\n\n");
+            printf("    %sThe %s '%s' was successfully removed.%s\n\n", g, itemLocation, choosenToBeRemove, c);
+            line();  
         } else {
-            scanf(" %[^\n]", garbage);
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            
+            invalidInput();
         }
     } else {
         scanf(" %[^\n]", garbage);
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
+        invalidInput();
     }
-    strcpy(currentLocation, currentLocationHolder);
+    strcpy(currentLocation, temporary);
+}
+
+void removeFolder(){
+    newPage();
+    printf("    %sChoose the %s%s of %s%s %syou want to %sremove%s%s:%s\n\n",B,b,itemFolder, itemLocation, c,B,b,c,B,c);
+    directoryChoices(buffer);
+    line1();
+    printf("%sEnter your choice (0 to cancel): %s", B,c);
+
+    if(scanf("%d", &choice) == 1){
+    } else {
+        scanf(" %[^\n]", garbage);
+        invalidInput();
+        return;
+    }
+    if (choice == 0){
+        newPage();
+        printf("               %sRemoving a %s has been cancelled.%s\n\n",r, itemLocation, c);
+        line();
+        return;
+    }
+    if (choice > directoryCount){
+        invalidInput();
+        return;
+    }
+    snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
+
+    if(!hasFiles(currentLocation)){
+        newPage();
+        printf("             %sNo %s available. Please add one first.%s\n\n", r, itemLocation, c);
+        line();
+        strcpy(currentLocation, currentLocationHolder);
+        returned = 1;
+        return;
+    }
+    removeFolderMain();
+}
+
+void choose(){
+    newPage();
+    printf("    %sChoose the %s%s of %s%s %syou want to %sview%s%s:%s\n\n", B, b,itemFolder, itemLocation, c,B,b,c,B,c);
+    directoryChoices(buffer);
+    enterYourChoice();
+    if (choice < 1 || choice > directoryCount){
+        directoryCount = 0;
+        invalidInput();
+        returned = 1;
+        error = 1;
+        return;
+    }
+    snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
+    if(!hasFiles(currentLocation)){
+        newPage();
+        printf("               %sNo %s available. Please add first.%s\n\n", r, itemLocation, c);
+        line();
+        strcpy(currentLocation, currentLocationHolder);
+        returned = 1;
+        error = 1;
+    }
 }
 
 /* =================================================================================================================
@@ -427,33 +500,29 @@ void removeFolder(){
    ================================================================================================================= */
 
 void viewProgram(){
-    strcpy(backToProgram, currentLocation);
     strcpy(currentLocationHolder, currentLocation);
+    strcpy(backToProgram, currentLocation);
 
     if(!hasFiles(currentLocation)){
         newPage();
-        printf("           \033[1;31mNo items available. Please add first.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        strcpy(currentLocation, currentLocationHolder);
+        printf("              %sNo programs available. Please add one first.%s\n\n", r,c);
+        line();
         return;
     }
-    
-
     if (returned == 1){
         returned = 0;
     } else {
         newPage();
-        printf("  \033[1mPrograms:\033[0m\n\n");
+        printf("    %sPrograms:%s\n\n", B, c);
         directoryList();
-        printf("===========================================================\n\n");
+        line();
     }
-    
-    printf("  \033[1mPlease choose an option:\033[0m\n\n");
-    printf("    [1] View year levels\n");
-    printf("    [2] Add year level\n");
-    printf("    [3] Rename year level \n");
-    printf("    [4] Remove year level\n");
-    printf("    [0] Back\n");
+    printf("    %sChoose an option:%s\n\n", B,c);
+    printf("      [1] View Year Levels\n");
+    printf("      [2] Add Year Level\n");
+    printf("      [3] Rename Year Level \n");
+    printf("      [4] Remove Year Level\n");
+    printf("      [0] Go Back\n");
     enterYourChoice();
     
     switch(choice){
@@ -461,168 +530,79 @@ void viewProgram(){
         case 2: addYearLevel(); break;
         case 3: renameYearLevel(); break;
         case 4: removeYearLevel(); break;
-        case 0:
-            main();
+        case 0: main();
         default:
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
+            invalidInput();
             returned = 1;
             viewProgram();
-            return;
-        
     }
     strcpy(currentLocation, currentLocationHolder);
 }
 
 void addProgram(){
+    strcpy(currentLocationHolder, currentLocation);
+    strcpy(itemLocation, "program");
     if(!directoryExists(currentLocation)){
         mkdir(currentLocation);
     }
-    addFolder();
-
+    addFolderMain();
 }
 
 void renameProgram(){
-    snprintf(currentLocationHolder, 255, "%s", currentLocation);
-    char newName[255];
-    char oldLocation[255];
-    char newLocation[255];
-
+    strcpy(currentLocationHolder, currentLocation);
+    strcpy(itemLocation, "program");
     if(!hasFiles(currentLocation)){
         newPage();
-        printf("           \033[1;31mNo items available. Please add first.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        snprintf(currentLocation, 255, "%s", currentLocationHolder);
+        printf("              %sNo programs available. Please add one first.%s\n\n", r,c);
+        line();
         return;
     }
-
-    renameFolderMain();
-    snprintf(currentLocation, 255, "%s", currentLocationHolder);
+    renameFolderMain(); 
 }
 
 void removeProgram(){
     strcpy(currentLocationHolder, currentLocation);
-    char choosenToBeRemove[X];
+    strcpy(itemLocation, "program");
+    
     if(!hasFiles(currentLocation)){
         newPage();
-        printf("           \033[1;31mNo items available. Please add first.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        strcpy(currentLocation, currentLocationHolder);
-        return;
-       
-    }
-
-    newPage();
-    printf("  \033[1mPlease choose what to remove:\033[0m\n\n");
-    directoryChoices(buffer);
-    printf("\n===========================================================\n");
-    
-    printf("Enter your choice (0 to cancel): ");
-    if(scanf("%d", &choice) == 1){
-    } else {
-        scanf(" %[^\n]", garbage);
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        strcpy(currentLocation, currentLocationHolder);
+        printf("              %sNo programs available. Please add one first.%s\n\n", r, c);
+        line();
         return;
     }
-    if (choice == 0){
-        newPage();
-        strcpy(currentLocation, currentLocationHolder);
-        return;
-    }
-    
-    strcpy(choosenToBeRemove, buffer[choice-1]);
-    
-    newPage();
-    printf("  \033[1mPlease choose an option:\033[0m\n\n");
-    printf("   [1] Yes\n");
-    printf("   [2] No\n");
-    printf("\n  \033[1;31mAre you sure you want to remove the file '%s'?\n  This action cannot be undone.\033[0m\n", buffer[choice -1]);
-    
-    printf("\n===========================================================\n");
-    printf("Enter your choice (0 to cancel): ");
-    if(scanf("%d", &choice) == 1){
-        if (choice == 0){
-            newPage();
-        } else if (choice == 1){
-            snprintf(fileLocationToBeRemove, X, "%s/%s", currentLocation, choosenToBeRemove);
-            removeDirectory(fileLocationToBeRemove);
-            
-            newPage();
-            printf("  \033[1;32m'%s' is successfully removed.\033[0m\n", choosenToBeRemove);
-            printf("\n===========================================================\n\n");
-            
-        } else if ( choice == 2){
-            newPage();
-            printf("  \033[1;32mThe removal of program '%s' has been cancelled.\033[0m\n", choosenToBeRemove);
-            printf("\n===========================================================\n\n");
-        } else {
-            scanf(" %[^\n]", garbage);
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            
-        }
-    } else {
-        scanf(" %[^\n]", garbage);
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
-    }
-    strcpy(currentLocationHolder, currentLocation);
+    removeFolderMain();
 }
 
 /* =================================================================================================================
                                             YEAR LEVEL CURRENT LOCATION
    ================================================================================================================= */
 
-void viewYearLevel(){
+void viewYearLevel(){ 
     strcpy(currentLocationHolder, currentLocation);
-
     if (returned == 1){
         returned = 0;
     } else {
-        newPage();
-        printf("  \033[1mChoose the \033[34mprogram of year level\033[0m \033[1myou want to view:\033[0m\n\n");
-        directoryChoices(buffer);
-        enterYourChoice();
-        if (choice == -1){
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            returned = 1;
-            viewProgram();
-            return;
-        }
-        snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
+        strcpy(itemFolder, "program");
+        strcpy(itemLocation, "year level");
 
-        if(!hasFiles(currentLocation)){
-            newPage();
-            printf("           \033[1;31mNo items available. Please add first.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            strcpy(currentLocation, currentLocationHolder);
-            returned = 1;
+        choose();
+        if (error == 1){
+            error = 0;
             viewProgram();
-            return;
         }
-
         strcpy(backToYearLevel, currentLocation);
         newPage();
-        printf("  \033[1mYear levels:\033[0m\n\n");
+        printf("    %sYear levels:%s\n\n", B,c);
         directoryList();
-        printf("===========================================================\n\n");
+        line();
     }
-    printf("  \033[1mPlease choose an option:\033[0m\n\n");
-    printf("    [1] View sections\n");
-    printf("    [2] Add section\n");
-    printf("    [3] Rename section\n");
-    printf("    [4] Remove section\n");
-    printf("    [0] Back\n");
+    printf("    %sChoose an option:%s\n\n", B,c);
+    printf("      [1] View Sections\n");
+    printf("      [2] Add Section\n");
+    printf("      [3] Rename Section\n");
+    printf("      [4] Remove Section\n");
+    printf("      [0] Go Back\n");
     enterYourChoice();
-    
     switch(choice){
         case 1: viewSection(); break;
         case 2: addSection(); break;
@@ -633,14 +613,10 @@ void viewYearLevel(){
             newPage();
             returned = 1;
             viewProgram();
-            break;
         default:
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
+            invalidInput();
             returned = 1;
             viewYearLevel();
-            return;
     }
     returned = 1;
     strcpy(currentLocation, currentLocationHolder);
@@ -649,28 +625,13 @@ void viewYearLevel(){
 
 void addYearLevel(){
     strcpy(currentLocationHolder, currentLocation);
-
-    newPage();
-    printf("  \033[1mTo which \033[34mprogram\033[0m \033[1mshould you add the new \033[34myear level\033[0m\033[1m?\033[0m\n\n");
-    directoryChoices(buffer);
-    enterYourChoice();
-    snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
-    if(!directoryExists(currentLocation)){
-        choice = -1;
-    }
-    strcpy(currentLocation, currentLocationHolder);
-    if (choice == -1){
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        returned = 1;
-        viewProgram();
-        return;
-    }
-    snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
-
+    strcpy(itemFolder, "program");
+    strcpy(itemLocation, "year level");
     addFolder();
-    
+    if (error == 1){
+        error = 0;
+        viewProgram();
+    }
     strcpy(currentLocation, currentLocationHolder);
     returned = 1;
     viewProgram();
@@ -678,9 +639,10 @@ void addYearLevel(){
 
 void renameYearLevel(){
     strcpy(currentLocationHolder, currentLocation);
+    strcpy(itemFolder, "program");
+    strcpy(itemLocation, "year level");
     newPage();
     renameFolder();
-
     strcpy(currentLocation, currentLocationHolder);
     returned = 1;
     viewProgram();  
@@ -688,20 +650,16 @@ void renameYearLevel(){
 
 void removeYearLevel(){
     strcpy(currentLocationHolder, currentLocation);
-    
-    newPage();
-    printf("  \033[1mChoose the \033[34mprogram of year level\033[0m \033[1mto be removed:\033[0m\n\n");
-    directoryChoices(buffer);
-    printf("\n===========================================================\n");
+    strcpy(itemFolder, "program");
+    strcpy(itemLocation, "year level");
     removeFolder();
-
     strcpy(currentLocation, currentLocationHolder);
     returned = 1;
     viewProgram();
 }
 
 /* =================================================================================================================
-                                            SECTION CURRENT LOCATION
+                                                     SECTION
    ================================================================================================================= */
 
 void viewSection(){ 
@@ -709,55 +667,41 @@ void viewSection(){
     if (returned == 1){
         returned = 0;
     } else {
-        newPage();
-        printf("  \033[1mChoose the \033[34myear level of section\033[0m \033[1myou want to view:\033[0m\n\n");
-        directoryChoices(buffer);
-        enterYourChoice();
-        if (choice == -1){
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            returned = 1;
-            viewYearLevel();
-        }
-        snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
+        strcpy(itemFolder, "year level");
+        strcpy(itemLocation, "section");
 
-        if(!hasFiles(currentLocation)){
-            newPage();
-            printf("           \033[1;31mNo items available. Please add first.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            strcpy(currentLocation, currentLocationHolder);
-            returned = 1;
+        choose();
+        if (error == 1) {
+            error = 0;
             viewYearLevel();
         }
-        snprintf(backToSection, X, "%s", currentLocation);
+        strcpy(backToSection, currentLocation);
+
         newPage();
-        printf("  \033[1mSections:\033[0m\n\n");
+        printf("    %sSections:%s\n\n", B,c);
         directoryList();
-        printf("===========================================================\n\n");
+        line();
     }
-    printf("  \033[1mPlease choose an option:\033[0m\n\n");
-    printf("    [1] View courses\n");
-    printf("    [2] Add course\n");
-    printf("    [3] Rename course\n");
-    printf("    [4] Remove course\n");
-    printf("    [0] Back\n");
+    printf("    %sChoose an option:%s\n\n", B,c);
+    printf("      [1] View Courses\n");
+    printf("      [2] Add Course\n");
+    printf("      [3] Rename Course\n");
+    printf("      [4] Remove Course\n");
+    printf("      [0] Go Back\n");
     enterYourChoice();
-    
+
     switch(choice){
         case 1: viewCourse(); break;
         case 2: addCourse(); break;
         case 3: renameCourse(); break;
         case 4: removeCourse(); break;
         case 0:
-            snprintf(currentLocation, X, "%s", backToYearLevel);
+            strcpy(currentLocation, backToYearLevel);
             newPage();
             returned = 1;
             viewYearLevel();
         default:
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
+            invalidInput();
             returned = 1;
             viewSection();
     }
@@ -768,33 +712,14 @@ void viewSection(){
 
 void addSection(){
     strcpy(currentLocationHolder, currentLocation);
-
-    newPage();
-    printf("  \033[1mTo which \033[34myear level\033[0m \033[1mshould you add the new \033[34msection\033[0m\033[1m?\033[0m\n\n");
-    
-    directoryChoices(buffer);
-    enterYourChoice();
-
-    snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
-
-    if(!directoryExists(currentLocation)){
-        choice = -1;
-    }
-
-    strcpy(currentLocation, currentLocationHolder);
-
-    if (choice == -1){
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        returned = 1;
-        viewYearLevel();
-    }
-
-    snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
+    strcpy(itemFolder, "year level");
+    strcpy(itemLocation, "section");
 
     addFolder();
-    
+    if (error == 1){
+        error = 0;
+        viewYearLevel();
+    }
     strcpy(currentLocation, currentLocationHolder);
     returned = 1;
     viewYearLevel();
@@ -802,6 +727,9 @@ void addSection(){
 
 void renameSection(){
     strcpy(currentLocationHolder, currentLocation);
+    strcpy(itemFolder, "year level");
+    strcpy(itemLocation, "section");
+
     newPage();
     renameFolder();
 
@@ -812,13 +740,8 @@ void renameSection(){
 
 void removeSection(){
     strcpy(currentLocationHolder, currentLocation);
-    
-    newPage();
-    printf("  \033[1mChoose the \033[1;34myear level of the section\033[0m to be removed:\033[0m\n\n");
-
-    directoryChoices(buffer);
-
-    printf("\n===========================================================\n");
+    strcpy(itemFolder, "year level");
+    strcpy(itemLocation, "section");
 
     removeFolder();
 
@@ -828,7 +751,7 @@ void removeSection(){
 }
 
 /* =================================================================================================================
-                                            COURSE CURRENT LOCATION
+                                                     COURSE
    ================================================================================================================= */
 
 void viewCourse(){
@@ -837,45 +760,23 @@ void viewCourse(){
     if (returned == 1){
         returned = 0;
     } else {
-        newPage();
+        strcpy(itemFolder, "section");
+        strcpy(itemLocation, "course");
 
-        printf("  \033[1mChoose the \033[34msection of course\033[0m \033[1myou want to view:\033[0m\n\n");
-
-        directoryChoices(buffer);
-
-        enterYourChoice();
-
-        if (choice == -1){
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            returned = 1;
+        choose();
+        if (error == 1){
+            error = 0;
             viewSection();
         }
-
-        snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
-        
-        if(!hasFiles(currentLocation)){
-            newPage();
-            printf("           \033[1;31mNo items available. Please add first.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            strcpy(currentLocation, currentLocationHolder);
-            returned = 1;
-            viewSection();
-        }
-
         strcpy(backToCourse, currentLocation);
         newPage();
-        printf("  \033[1mCourses:\033[0m\n\n");
+        printf("    %sCourses:%s\n\n", B,c);
         directoryList();
-        printf("===========================================================\n\n");
-
+        line();
     }
-
-    printf("  \033[1mPlease choose an option:\033[0m\n\n");
-    printf("    [1] Manage course\n");
-    printf("    [0] Back\n");
-
+    printf("    %sChoose an option:%s\n\n", B,c);
+    printf("      [1] Manage Course\n");
+    printf("      [0] Go Back\n");
     enterYourChoice();
     
     switch(choice){
@@ -887,9 +788,7 @@ void viewCourse(){
             returned = 1;
             viewSection();
         default:
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
+            invalidInput();
             returned = 1;
             viewCourse();
     }
@@ -900,35 +799,13 @@ void viewCourse(){
     
 void addCourse(){
     strcpy(currentLocationHolder, currentLocation);
-
-    newPage();
-    printf("  \033[1mTo which \033[34msection\033[0m \033[1mshould you add the new \033[34mcourse\033[0m\033[1m?\033[0m\n\n");
-
-    directoryChoices(buffer);
-
-    enterYourChoice();
-
-    snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
-
-    if(!directoryExists(currentLocation)){
-        choice = -1;
-    }
-
-    strcpy(currentLocation, currentLocationHolder);
-
-    if (choice == -1){
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        returned = 1;
-        viewSection();
-        return;
-    }
-
-    snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
-
+    strcpy(itemFolder, "section");
+    strcpy(itemLocation, "course");
     addFolder();
-    
+    if (error == 1){
+        error = 0;
+        viewSection();
+    }
     strcpy(currentLocation, currentLocationHolder);
     returned = 1;
     viewSection();
@@ -936,27 +813,20 @@ void addCourse(){
 
 void renameCourse(){
     strcpy(currentLocationHolder, currentLocation);
+    strcpy(itemFolder, "section");
+    strcpy(itemLocation, "course");
     newPage();
     renameFolder();
-
     strcpy(currentLocation, currentLocationHolder);
     returned = 1;
     viewSection();  
 }
 
 void removeCourse(){
-    snprintf(currentLocationHolder, 255, "%s", currentLocation);
-    
-    newPage();
-
-    printf("  \033[1mChoose the \033[1;34msection of course \033[0m\033[1mto be remove:\033[0m\n\n");
-
-    directoryChoices(buffer);
-
-    printf("\n===========================================================\n");
-
+    strcpy(currentLocationHolder, currentLocation);
+    strcpy(itemFolder, "section");
+    strcpy(itemLocation, "course");
     removeFolder();
-
     strcpy(currentLocation, currentLocationHolder);
     returned = 1;
     viewSection();
@@ -964,70 +834,60 @@ void removeCourse(){
 
 void manageCourse(){
     strcpy(currentLocationHolder, currentLocation);
-
+    strcpy(itemLocation, "course");
     if (returned == 1){
         returned = 0;
     } else {
         newPage();
-
-        printf("  \033[1mChoose the \033[34mcourse\033[0m \033[1myou want to manage:\033[0m\n\n");
-
+        printf("    %sChoose the %scourse%s %syou want to %smanage%s%s:%s\n\n", B, b, c, B,b,c,B,c);
         directoryChoices(buffer);
-
         enterYourChoice();
 
-        if (choice == -1){
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
+        if (choice == -1 || choice < 1 || choice > directoryCount){
+            invalidInput();
             returned = 1;
             viewCourse();
         }
-        
         snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
-
         strcpy(courseLocation, currentLocation);
-        
         char temporary[X];
-
         if (!hasFiles(currentLocation)) {
             snprintf(temporary, X, "%s/%s", currentLocation, "Assessments");
             mkdir(temporary);
 
             for (int i = 0; i < 6; i++) {
-                snprintf(currentLocation, X, "%s/%s", temporary, assessments[i]);
-                FILE *F1 = fopen(currentLocation, "a");
+                snprintf(currentLocation, X, "%s/%s.csv", temporary, assessments[i]);
+                FILE *F1 = fopen(currentLocation, "w");
+                fprintf(F1, "%s;Scores\n", assessments[i]);
                 fclose(F1);
             }
-
             snprintf(temporary, X, "%s/Students", courseLocation);
             mkdir(temporary);
-            
             strcpy(currentLocation, currentLocationHolder);
+            snprintf(currentLocation, X, "%s/Grading System Settings.csv", courseLocation);
+
+            FILE *file = fopen(currentLocation, "w");
+            fprintf(file, "Assessment Type;Percentage\nActivities;0\nAssignments;0\nExams;60\nPerformance Tasks;40\nProjects;0\nQuizzes;0\n");
+            fclose(file);
+           
+            snprintf(currentLocation, X, "%s/Students Current Grade.csv", courseLocation);
+            file = fopen(currentLocation, "w");
+            fprintf(file, "Students;Current Grade\n");
+            fclose(file);
+
+            snprintf(currentLocation, X, "%s/Students Info.csv", courseLocation);
+            file = fopen(currentLocation, "w");
+            fprintf(file, "Last Name;First Name;Middle Name;Student ID;Age;Birthday;Address;Contact No.;Email\n");
+            fclose(file);
         }
-        
-        snprintf(currentLocation, X, "%s/Grading System Settings", courseLocation);
-
-        FILE *F1 = fopen(currentLocation, "r");
-
-        if (F1 == NULL) {
-            FILE *F2 = fopen(currentLocation, "a");
-            fprintf(F2, "10\n10\n10\n10\n30\n30\n");
-            fclose(F2);
-        } else {
-            fclose(F1);
-        }
-
         newPage();
     }
-
-    printf("  \033[1mPlease choose an option:\033[0m\n\n");
-    printf("   [1] View assessments     [5] Add assessment to student\n");
-    printf("   [2] Add assessment       [6] View students\n");
-    printf("   [3] Edit assessment      [7] Add student\n");
-    printf("   [4] Remove assessment    [8] View grading settings\n\n");
-    printf("   [0] Back\n");
-
+    printf("    %sChoose an option:%s\n\n", B,c);
+    printf("      [1] View Assessments            [6] Add Score to Student\n");
+    printf("      [2] Add Assessment              [7] View Students\n");
+    printf("      [3] Edit Assessment             [8] Add Student\n");
+    printf("      [4] Remove Assessment           [9] Remove Student \n");
+    printf("      [5] View Grading Settings       [0] Go Back\n");
     enterYourChoice();
     
     switch(choice){
@@ -1035,19 +895,20 @@ void manageCourse(){
         case 2: addAssessment(); break;
         case 3: editAssessment(); break;
         case 4: removeAssessment(); break;
-        case 5: addStudentAssessment(); break;
-        case 6: viewStudent(); break;
-        case 7: addStudent(); break;
-        case 8: viewGradingSystemSettings(); break;
+        case 5: viewGradingSystemSettings(); break;
+        case 6: addStudentAssessment(); break;
+        case 7: viewStudent(); break;
+        case 8: addStudent(); break;
+        case 9: removeStudent(); break;
         case 0:
             newPage();
+            strcpy(currentLocation, backToCourse);
             returned = 1;
             viewCourse();
         default:
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
+            invalidInput();
             returned = 1;
+            strcpy(currentLocation, currentLocationHolder);
             manageCourse();
     }
     returned = 1;
@@ -1056,381 +917,335 @@ void manageCourse(){
 }
 
 /* =================================================================================================================
-                                            ASSESSMENT CURRENT LOCATION
+                                                  ASSESSMENT
    ================================================================================================================= */
 
-void viewAssessment(){
-    strcpy(currentLocationHolder, currentLocation);
-    
-    char temporary[123];
+void viewAssessment() {
+    char temporary[X];
     snprintf(currentLocation, X, "%s/Assessments", courseLocation);
     strcpy(temporary, currentLocation);
 
-    
-    char text[123];
-    FILE *f[10];
-    newPage();
-    for (int i = 0; i < 6; i++){
-        snprintf(temporary, X, "%s/%s", currentLocation, assessments[i]);
-        f[i] = fopen(temporary, "r");
-        printf("  \033[1m%s:\033[0m\n\n", assessments[i]);
-        int j = 1;
-        while (fgets(text, X, f[i]) != NULL) {
-            
-            text[strlen(text) - 1] = '\0';
+    char text[X];
+    int num, l = 0;
+    FILE *file;
 
-            if(j % 2 == 0){
-                printf("%s\n", text);
-            } else {
-                printf("    - %s: ", text);
+    newPage();
+    for (int i = 0; i < 6; i++) {
+        snprintf(temporary, X, "%s/%s.csv", currentLocation, assessments[i]);
+        file = fopen(temporary, "r");
+        int hasItem = 0;
+        fgets(garbage, X, file);
+
+        for (int j = 0; fscanf(file, "%[^;];%d\n", text, &num) == 2; j++) {
+            if (j == 0){
+                printf("    %s%s:%s\n\n", B, assessments[i], c);
             }
-            j++;
+            printf("      - %s: %d\n", text, num);
+            hasItem = 1;      
         }
-        fclose(f[i]);
-        strcpy(temporary, currentLocation);
-        printf("\n");
+        fclose(file);
+        if (hasItem == 1){
+            l++;
+            printf("\n");
+        }    
     }
-    printf("===========================================================\n\n");
-    
+    if (l < 1) {
+        printf("            %sNo assessments available. Please add one first.%s\n\n", r,c);
+    }
+    line();
     strcpy(currentLocation, currentLocationHolder);
     returned = 1;
     manageCourse();
 }
 
 void addAssessment() {
-    strcpy(currentLocationHolder, currentLocation);
-
     char temporary[X];
-    
     snprintf(currentLocation, X, "%s/Assessments", courseLocation);
-   
+    
     newPage();
-    printf("  \033[1mChoose the \033[34mtype of assessment\033[0m \033[1myou want to add:\033[0m\n\n");
-
-    directoryChoices(buffer);
-
-    enterYourChoice();
-
-    switch (choice) {
-        case 1:
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-        case 6:
+    printf("    %sChoose the %stype of assessment%s %syou want to %sadd%s%s:%s\n\n", B, b, c, B, b, c,B,c);
+    for (int i = 0; i < 6; i++) {
+        printf("      [%d] %s\n", i + 1, assessments[i]);
+    }
+    enterYourChoice0ToCancel();
+    if (choice == 0){
+        newPage();
+        printf("                %sAdding an assessment has been cancelled.%s\n\n",r, c);
+        line();
+        returned = 1;
+        strcpy(currentLocation, currentLocationHolder);
+        manageCourse();
+    }
+    if (choice > 0 && choice < 7){
+        if (choice == 4){
             newPage();
-            printf("--------------------- \033[3mAdding an item\033[0m ----------------------\n\n");
-            printf("===========================================================\n");        
-            printf("Enter the name of the assessment: ");
-            scanf(" %[^\n]", assessmentName);
-            printf("Enter the total score: ");
-            if(scanf("%d", &assessmentOverscore) == 1){   
-            } else {
-                scanf(" %[^\n]", garbage);
-                newPage();
-                printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-                printf("===========================================================\n\n");
-                returned = 1;
-                strcpy(currentLocation, currentLocationHolder);
-                manageCourse();
-            }
-            break;
-        default:
+            printf("             %s------- %sAdding a New %s%s %s-------%s\n",B, b, assessmentsSingular[choice - 1], c, B, c);
+        } else {
             newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
+            printf("                 %s------- %sAdding a New %s%s %s-------%s\n",B, b, assessmentsSingular[choice - 1], c, B, c);
+        }
+        line1();       
+        printf("%sEnter the name: %s", B,c);
+        scanf(" %[^\n]", assessmentName);
+        printf("%sEnter the total score: %s", B,c);
+        if (scanf("%d", &assessmentOverscore) != 1) {   
+            scanf(" %[^\n]", garbage);
+            invalidInput();
             returned = 1;
             strcpy(currentLocation, currentLocationHolder);
             manageCourse();
-    }
-    
-    
-    snprintf(currentLocation, X, "%s/%s", currentLocation, assessments[choice - 1]);
-    FILE *f2 = fopen(currentLocation, "a");
-    
-    fprintf(f2, "%s\n%d\n", assessmentName, assessmentOverscore);
-    
-    fclose(f2);
-    snprintf(currentLocation, X, "%s/%s", currentLocation, assessments[choice - 1]);
+        }
+    } else {
+        invalidInput();
+        returned = 1;
+        strcpy(currentLocation, currentLocationHolder);
+        manageCourse();
+    }     
+    snprintf(currentLocation, X, "%s/%s.csv", currentLocation, assessments[choice -1]);
+    FILE *file = fopen(currentLocation, "a");
+    fprintf(file, "%s;%d\n", assessmentName, assessmentOverscore);   
+    fclose(file);
 
     returned = 1;
     newPage();
-    printf("  \033[1;32m'%s' is successfully added at %s.\033[0m\n\n", assessmentName, assessments[choice -1]);
-    printf("===========================================================\n\n");
+    printf("    %sThe %s '%s' was added successfully.%s\n\n", g, assessmentsSingular[choice -1], assessmentName, c);
+    line();
+    strcpy(currentLocation, currentLocationHolder);
     manageCourse();
 }
 
 void editAssessment() {
-    strcpy(currentLocationHolder, currentLocation);
-
-    char text[X][X];
-
-    snprintf(currentLocation, X, "%s/Assessments", courseLocation);
+    snprintf(currentLocation, X, "%s/Assessments", courseLocation); 
 
     newPage();
-    printf("  \033[1mChoose the type of assessment to edit:\033[0m\n\n");
-
-    directoryChoices(buffer);
-
-    enterYourChoice();
-
-    switch(choice){
-        case 1: case 2: case 3: case 4: case 5: case 6:
-            break;
-        default:
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            returned = 1;
-            strcpy(currentLocation, currentLocationHolder);
-            manageCourse();
+    printf("    %sChoose the %stype of assessment%s%s you want to %sedit%s%s:%s\n\n", B, b, c, B, b, c, B, c);
+    for (int i = 0; i < 6; i++) {
+        printf("      [%d] %s\n", i + 1, assessments[i]);
     }
-
-    snprintf(currentLocation, X, "%s/Assessments/%s", courseLocation, assessments[choice - 1]);
-    FILE *F = fopen(currentLocation, "r");
-
-    char text1[X][X];
-    int lines1 = 0;
-
-    while (fgets(text1[lines1], X, F) != NULL) {
-        text1[lines1][strlen(text1[lines1]) - 1] = '\0';
-        lines1++;
-    }
-
-    fclose(F);
-
-    if (lines1 == 0) {
+    enterYourChoice0ToCancel();
+    if (choice == 0){
         newPage();
-        printf("    \033[1;31mNo items in '%s'. Please add assessments first.\033[0m\n\n", assessments[choice - 1]);
-        printf("===========================================================\n\n");
+        printf("               %sEditing an assessment has been cancelled.%s\n\n",r, c);
+        line();
         returned = 1;
-        snprintf(currentLocation, X, "%s", currentLocationHolder);
+        strcpy(currentLocation, currentLocationHolder);
         manageCourse();
     }
+    int choice1 = choice;
 
-    snprintf(currentLocation, X, "%s/Assessments/%s", courseLocation, assessments[choice - 1]);
-
-    FILE *f = fopen(currentLocation, "r");
- 
-    int lines = 0;
-
-    while (fgets(text[lines], X, f) != NULL) {
-        text[lines][strcspn(text[lines], "\n")] = '\0'; 
-        lines++;
-    }
-
-    fclose(f);
-
-    int choiceLine;
-
-    newPage();
-
-    printf(" \033[1mWhich assessment of '%s' would you like to edit? \033[0m\n\n", assessments[choice-1]);
-
-    for (int i = 1; i <= lines; i++) {
-        if (i % 2 != 0 ){
-            printf("    [%d] %s: ", (i + 1)/2 , text[i-1]);
-        } else {
-            printf("%s\n", text[i-1]);
-        }
-    }
+    if (choice1 < 1 || choice1 > 6) {
+        invalidInput();
+        returned = 1;
+        strcpy(currentLocation, currentLocationHolder);
+        manageCourse();
+    } 
+    char temporary[X];
+    snprintf(temporary, X, "%s/%s.csv", currentLocation, assessments[choice1 - 1]);
+    FILE *file = fopen(temporary, "r");
     
-    printf("\n===========================================================\n");
+    char header[X], name[X][X]; 
+    int score[X], count = 0;
 
-    printf("Enter your choice: ");
+    fgets(header, X, file);
+    while (fscanf(file, " %[^;];%d\n", name[count], &score[count]) == 2) {
+        count++;
+    }
+    fclose(file);
 
-    if (scanf("%d", &choiceLine) != 1 || choiceLine < 1 || choiceLine > lines / 2) {
+    if (count == 0) {
         newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        strcpy(currentLocation, currentLocationHolder);
+        if (choice == 4){
+            printf("      %sNo items found in %s. Please add one first.%s\n\n", r, assessments[choice - 1], c);
+        } else {
+            printf("          %sNo items found in %s. Please add one first.%s\n\n", r, assessments[choice - 1], c);
+        }
+        line();
         returned = 1;
         manageCourse();
     }
-
-    choiceLine = (choiceLine - 1) * 2;
-
+    newPage();
+    printf("    %sChoose the %s%s%s %syou want to %sedit%s%s: %s\n\n", B, b, assessmentsSingular[choice1 - 1], c, B, b,c, B, c );
+    for (int i = 0; i < count; i++) {
+        printf("      [%d] %s: %d\n", i + 1, name[i], score[i]);
+    }
+    enterYourChoice0ToCancel();
+    if (choice == 0){
+        newPage();
+        printf("               %sEditing an assessment has been cancelled.%s\n\n",r, c);
+        line();
+        returned = 1;
+        strcpy(currentLocation, currentLocationHolder);
+        manageCourse();
+    } else if (choice < 1 || choice > count){
+        invalidInput();
+        returned = 1;
+        manageCourse();
+    }
     char newName[X];
-    int newOverscore;
-
-    newPage();
-    printf("--------------------- \033[3mEditing an item\033[0m ---------------------\n\n");
-    printf("===========================================================\n"); 
-
-    printf("Enter the new name for the assessment: ");
-    scanf(" %[^\n]", newName);
-
-    printf("Enter the new total score: ");
-    if (scanf("%d", &newOverscore) != 1) {
+    int newScore;
+    if (choice1 == 4){
         newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        strcpy(currentLocation, currentLocationHolder);
+        printf("                %s------- %sEditing %s%s%s -------%s\n\n",B, b, assessmentsSingular[choice1 - 1], c, B, c);
+    } else {
+        newPage();
+        printf("                    %s------- %sEditing %s%s%s -------%s\n\n",B, b, assessmentsSingular[choice1 - 1], c, B, c);
+    }
+    line();
+    printf("    %s%s Name:%s %s\n", b,assessmentsSingular[choice1 -1], c, name[choice - 1]);
+    printf("    %sTotal Score:%s %d\n", b, c, score[choice -1]);
+    line1();
+    printf("%sEnter the new name: %s", B,c);
+    scanf(" %[^\n]", newName);
+    printf("%sEnter the new total score: %s", B,c);
+    if (scanf("%d", &newScore) != 1) {   
+        scanf(" %[^\n]", garbage);
+        invalidInput();
         returned = 1;
+        strcpy(currentLocation, currentLocationHolder);
         manageCourse();
     }
+    char oldName[X];
+    strcpy(oldName, name[choice - 1]);
+    int oldScore = score[choice - 1];
+    
+    strcpy(name[choice - 1], newName);
+    score[choice - 1] = newScore;
 
-    snprintf(text[choiceLine], X, "%s", newName);
-    snprintf(text[choiceLine + 1], X, "%d", newOverscore);
-
-    f = fopen(currentLocation, "w");
-   
-    for (int i = 0; i < lines; i++) {
-        fprintf(f, "%s\n", text[i]);
+    file = fopen(temporary, "w");
+    
+    fprintf(file, "%s;Scores\n", assessments[choice1 - 1]);
+    for (int i = 0; i < count; i++) {
+        fprintf(file, "%s;%d\n", name[i], score[i]);
     }
+    fclose(file);
 
-    fclose(f);
-
-    strcpy(currentLocation, currentLocationHolder);
-    returned = 1;
     newPage();
-    printf("                \033[1;32mItem successfully edited.\033[0m\n\n");
-    printf("===========================================================\n\n");
+    printf("    %s'%s: %d' was successfully edited to '%s: %d'.%s\n\n", g, oldName, oldScore, newName, newScore, c);
+    line();
+    returned = 1;
     manageCourse();
 }
 
 void removeAssessment() {
-    strcpy(currentLocationHolder, currentLocation);
-    
-    char text[X][X];
-    int lines = 0;  
-
     snprintf(currentLocation, X, "%s/Assessments", courseLocation);
     newPage();
-    printf("  \033[1mChoose the type of assessment to remove:\033[0m\n\n");
-    directoryChoices(buffer);
-    enterYourChoice();
-
-    switch(choice){
-        case 1: case 2: case 3: case 4: case 5: case 6:
-            break;
-        default:
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            returned = 1;
-            strcpy(currentLocation, currentLocationHolder);
-            manageCourse();
+    printf("    %sChoose the %stype of assessment%s%s you want to %sremove%s%s:%s\n\n", B, b, c,B, b, c, B, c);
+    for (int i = 0; i < 6; i++) {
+        printf("      [%d] %s\n", i + 1, assessments[i]);
     }
-
-
-    snprintf(currentLocation, X, "%s/Assessments/%s", courseLocation, assessments[choice - 1]);
-    FILE *F = fopen(currentLocation, "r");
-
-    char text1[X][X];
-    int lines1 = 0;
-
-    while (fgets(text1[lines1], X, F) != NULL) {
-        text1[lines1][strlen(text1[lines1]) - 1] = '\0';
-        lines1++;
-    }
-
-    fclose(F);
-
-    if (lines1 == 0) {
+    enterYourChoice0ToCancel();
+    if (choice == 0){
         newPage();
-        printf("    \033[1;31mNo items in '%s'. Please add assessments first.\033[0m\n\n", assessments[choice - 1]);
-        printf("===========================================================\n\n");
-        returned = 1;
-        snprintf(currentLocation, X, "%s", currentLocationHolder);
-        manageCourse();
-    }
-
-
-    snprintf(currentLocation, X, "%s/Assessments/%s", courseLocation, assessments[choice - 1]);
-
-    FILE *f = fopen(currentLocation, "r");
-
-    while (fgets(text[lines], X, f) != NULL) {
-        text[lines][strcspn(text[lines], "\n")] = '\0';
-        lines++;
-    }
-
-    fclose(f);
-
-    int choiceLine;
-
-    newPage();
-    printf(" \033[1mWhich assessment of '%s' would you like to remove? \033[0m\n\n", assessments[choice-1]);
-   
-    for (int i = 0; i < lines; i += 2) {
-        printf("    [%d] %s\n", i / 2 + 1, text[i]);
-    }
-    
-    printf("\n===========================================================\n");
-
-    printf("Enter your choice: ");   
-    if (scanf("%d", &choiceLine) != 1 || choiceLine < 1 || choiceLine > lines / 2 ) {
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
+        printf("               %sRemoving an assessment has been cancelled.%s\n\n",r, c);
+        line();
         returned = 1;
         strcpy(currentLocation, currentLocationHolder);
         manageCourse();
     }
-
-    choiceLine = (choiceLine - 1) * 2;
-
-    for (int i = choiceLine; i < lines - 2; i++) {
-        strcpy(text[i], text[i + 2]);
+    if (choice < 1 || choice > 6) {
+        invalidInput();
+        returned = 1;
+        manageCourse();
     }
+    char temporary[X];
+    char text[X][X];
+    int number[X], lines = 0;
+    int choice1 = choice;
 
-    lines -= 2;
+    snprintf(temporary, X, "%s/%s.csv", currentLocation, assessments[choice - 1]);
+    FILE *file = fopen(temporary, "r");
 
-    f = fopen(currentLocation, "w");
-
-    for (int i = 0; i < lines; i++) {
-        fprintf(f, "%s\n", text[i]);
+    fgets(garbage, X, file); 
+    for (int i = 0; fscanf(file, "%[^;];%d\n", text[i], &number[i]) == 2; i++) {
+        lines++;
     }
+    fclose(file);
 
-    fclose(f);
-
-    strcpy(currentLocation, currentLocationHolder);
-    returned = 1;
+    if (lines == 0) {
+        newPage();
+        if (choice == 4){
+            printf("      %sNo items found in %s. Please add one first.%s\n\n", r, assessments[choice - 1], c);
+        } else {
+            printf("          %sNo items found in %s. Please add one first.%s\n\n", r, assessments[choice - 1], c);
+        }
+        line();
+        returned = 1;
+        manageCourse();
+    }
     newPage();
-    printf("                \033[1;32mItem successfully removed.\033[0m\n\n");
-    printf("===========================================================\n\n");
+    printf("    %sChoose the %s%s%s %syou want to %sremove%s%s: %s\n\n", B, b, assessmentsSingular[choice - 1], c, B, b,c, B, c);
+    for (int i = 0; i < lines; i++) {
+        printf("      [%d] %s: %d\n", i + 1, text[i], number[i]);
+    }
+    enterYourChoice0ToCancel();
+    if (choice == 0){
+        newPage();
+        printf("               %sRemoving an assessment has been cancelled.%s\n\n",r, c);
+        line();
+        returned = 1;
+        strcpy(currentLocation, currentLocationHolder);
+        manageCourse();
+    }
+    if (choice < 1 || choice > lines) {
+        invalidInput();
+        returned = 1;
+        manageCourse();
+    }
+    char removedName[X];
+    strcpy(removedName, text[choice - 1]);
+    int removedScore = number[choice -1];
+    for (int i = choice - 1; i < lines - 1; i++) {
+        strcpy(text[i], text[i + 1]);
+        number[i] = number[i + 1];
+    }
+    lines--;
+
+    file = fopen(temporary, "w");
+
+    fprintf(file, "%s;Scores\n", assessments[choice1 - 1]); 
+    for (int i = 0; i < lines; i++) {
+        fprintf(file, "%s;%d\n", text[i], number[i]);
+    }
+    fclose(file);
+
+    newPage();
+    printf("    %sThe '%s: %d' successfully removed from %s.%s\n\n", g, removedName, removedScore,assessments[choice1 - 1], c);
+    line();
+    returned = 1;
     manageCourse();
 }
 
 /* =================================================================================================================
-                                             STUDENT CURRENT LOCATION
+                                                    STUDENT
    ================================================================================================================= */
 
 void viewStudent(){
     strcpy(currentLocationHolder, currentLocation);
-
     if (returned == 1){
         returned = 0;
     } else {
         newPage();
-        
         char temporary[X];
-
         snprintf(temporary, X, "%s/Students", courseLocation);
         
         if(!hasFiles(temporary)){
             newPage();
-            printf("          \033[1;31mNo students available. Please add first.\033[0m\n\n");
-            printf("===========================================================\n\n");
+            printf("              %sNo students available. Please add one first.%s\n\n", r, c);
+            line();
             returned = 1;
             strcpy(currentLocation, currentLocationHolder);
             manageCourse();
-            return;
         }
-
         snprintf(currentLocation, X, "%s/Students", courseLocation);
         newPage();
-        printf("  \033[1mStudents:\033[0m\n\n");
+        printf("    %sStudents:%s\n\n", B,c);
         directoryList();
-        printf("===========================================================\n\n");
-
+        line();
     }
-    printf("  \033[1mPlease choose an option:\033[0m\n\n");
-    printf("    [1] View student records\n");
-    printf("    [2] View students initial grade\n");
-    printf("    [0] Back\n");
-
+    printf("    %sChoose an option:%s\n\n", B,c);
+    printf("      [1] View Student Records\n");
+    printf("      [2] View Students Current Grade\n");
+    printf("      [0] Go Back\n");
     enterYourChoice();
     
     switch(choice){
@@ -1442,9 +1257,7 @@ void viewStudent(){
             returned = 1;
             manageCourse();
         default:
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
+            invalidInput();
             returned = 1;
             viewStudent();
     }
@@ -1455,346 +1268,245 @@ void viewStudent(){
 
 void addStudent(){
     strcpy(currentLocationHolder, currentLocation);
-    
     newPage();
-    printf("  \033[1mEnter the student info:\033[1m\033[0m\n\n");
+    newPage();
+    printf("                 %s------- %sAdding a New Student%s %s-------%s\n\n", B, b, c, B, c);
+    line();  
+    printf("    %sEnter the %sstudent info%s%s:%s\n\n", B,b, c,B,c);
+    char container[9][X] = {"Last Name    : ", "First Name   : ", "Middle Name  : ", "Student ID   : ", "Age          : ", "Birthday     : ", "Address      : ", "Contact No.  : ", "Email        : "};
+    char info[X][X];
 
-    char name[X][X];
-
-    printf("    Last name: ");
-    scanf(" %[^\n]", name[0]);
-    printf("    First name: ");
-    scanf(" %[^\n]", name[1]);
-    printf("    Middle name: ");
-    scanf(" %[^\n]", name[2]);
-    printf("    Age: ");
-    scanf(" %[^\n]", name[3]);
-    printf("    Birthday: ");
-    scanf(" %[^\n]", name[4]);
-    printf("    Address: ");
-    scanf(" %[^\n]", name[5]);
-    printf("    Contact no.: ");
-    scanf(" %[^\n]", name[6]);
-    printf("    Email: ");
-    scanf(" %[^\n]", name[7]);
-    
+    for (int i = 0; i < 9; i++){
+        printf("      %s", container[i]);
+        scanf(" %[^\n]", info[i]);
+    }
     char temporary[X];
-    snprintf(temporary, X, "%s/Students/%s, %s %s", courseLocation, name[0], name[1], name[2]);
+    char fullName[X];
+    snprintf(fullName, X, "%s, %s %s", info[0], info[1], info[2]);
+    snprintf(temporary, X, "%s/Students/%s", courseLocation, fullName);
     mkdir(temporary);
 
     char temporary1[X];
-    snprintf(temporary1, X, "%s/Student Info", temporary);
-    FILE *F = fopen(temporary1, "w");
-    for (int i = 0; i < 8; i++){
-        fprintf(F, "%s\n",  name[i]);
+    snprintf(temporary1, X, "%s/Student Info.csv", temporary);
+    FILE *file = fopen(temporary1, "a");
+    fprintf(file, "Last Name;First Name;Middle Name;Student ID;Age;Birthday;Address;Contact No.;Email\n");
+    for (int i = 0; i < 9; i++){
+        if(i == 0){
+            fprintf(file, "%s",  info[i]);
+        } else {
+            fprintf(file, ";%s",  info[i]);
+        }
     }
+    fclose(file);
 
-    fclose(F);
+    snprintf(currentLocation, X, "%s/Students Info.csv", courseLocation);
+    file = fopen(currentLocation, "a");
+    fprintf(file, "%s",  info[0]);
+    for (int i = 1; i < 9; i++){
+        fprintf(file, ";%s",  info[i]);
+    }
+    fprintf(file, "\n");
+    fclose(file);
 
-    snprintf(temporary1, X, "%s/Student Percentage", temporary);
-    FILE *F2 = fopen(temporary1, "a");
-    fclose(F2);
+    snprintf(temporary1, X, "%s/Student Current Grade.csv", temporary);
+    file = fopen(temporary1, "a");
+    fprintf(file, "Assessment Type;Student Scores;Total Scores;Grading System Percentage\n");
+    fclose(file);
 
     snprintf(temporary1, X, "%s/Student Assessments", temporary);
     mkdir(temporary1);
-    
     for (int i = 0; i < 6; i++) {
-        snprintf(currentLocation, X, "%s/%s", temporary1, assessments[i]);
-        FILE *f1 = fopen(currentLocation, "a");
-        fclose(f1);
+        snprintf(currentLocation, X, "%s/%s.csv", temporary1, assessments[i]);
+        file = fopen(currentLocation, "a");
+        fprintf(file, "%s;Scores\n", assessments[i]);
+        fclose(file);
     }
-    
     strcpy(currentLocation,currentLocationHolder);
     returned = 1;
     newPage();
+    printf("    %sStudent '%s' was successfully added.%s\n\n", g, fullName, c);
+    line();
     manageCourse();
 }
 
-void viewStudentRecord(){
-    strcpy(currentLocationHolder, currentLocation);
-    
-    if (returned == 1){
-        returned = 0;
-    } else {
+void removeStudent(){
+    snprintf(currentLocation, X, "%s/Students", courseLocation);
+    strcpy(itemLocation, "student");
+
+    if(!hasFiles(currentLocation)){
         newPage();
-        printf("  \033[1mChoose the \033[34mstudent\033[0m \033[1myou want to view:\033[0m\n\n");
-
-        directoryChoices(buffer);
-
-        enterYourChoice();
-
-        if (choice == -1){
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            returned = 1;
-            strcpy(currentLocation,currentLocationHolder);
-            viewStudent();
-            return;
-        }
-
-        snprintf(currentLocation, X, "%s/%s", currentLocation, buffer[choice-1]);
-
-        if(!hasFiles(currentLocation)){
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            returned = 1;
-            strcpy(currentLocation,currentLocationHolder);
-            viewStudent();
-            return;
-        }
-        newPage();
+        printf("              %sNo students available. Please add one first.%s\n\n", r, c);
+        line();
+        returned = 1;
+        manageCourse();
     }
-
-    printf("  \033[1mPlease choose an option:\033[0m\n\n");
-    printf("    [1] View student info\n");
-    printf("    [2] View student assessments\n");
-    printf("    [3] Remove student assessment\n");
-    printf("    [4] View student grade percentage\n");
-    printf("    [0] Back\n");
-    
-    enterYourChoice();
-    
-    switch(choice){
-        case 1: viewStudentInfo(); break;
-        case 2: viewStudentAssessment(); break;
-        case 3: removeStudentAssessment(); break;
-        case 4: viewStudentGradeSummary(); break;
-        case 0:
-            returned = 1;
-            newPage();
-            strcpy(currentLocation, currentLocationHolder);
-            viewStudent();
-        default:
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
-            returned = 1;
-            strcpy(currentLocation, currentLocationHolder);
-            viewStudentRecord();
-    }
-
+    removeFolderMain();
     returned = 1;
-    strcpy(currentLocation, currentLocationHolder);
-    viewStudent();
+    manageCourse();
 }
 
 void viewStudentInfo(){
     strcpy(currentLocationHolder,currentLocation);
+    char text[X], text2[9][X];
+    char container[9][X] = {"Last Name    : ", "First Name   : ", "Middle Name  : ", "Student ID   : ", "Age          : ", "Birthday     : ", "Address      : ", "Contact No.  : ", "Email        : "};
 
-    char text[X];
-    
     newPage();
-    printf("  \033[1mStudent info:\033[0m\n\n");
-    
-    char container[10][X] = {"Last name: ", "First name: ", "Middle name: ", "Age: ", "Birthday: ", "Address: ", "Contact no.: ", "Email: "};
-
-    snprintf(currentLocation, X, "%s/Student Info", currentLocation);
-
+    printf("    %sStudent info:%s\n\n", B,c);
+    snprintf(currentLocation, X, "%s/Student Info.csv", currentLocation);
     FILE *F = fopen(currentLocation, "r");
 
-    int i = 0;
-
-    while(fgets(text, X, F) != NULL){
-        printf("    %s%s", container[i], text);
-        i++;
+    for(int i = 0; i < 2; i++){
+        if (i == 0){
+            fgets(text, X, F);
+            continue;
+        }
+        for(int j = 0; j < 9; j++){
+            fscanf(F, "%[^;];", text2[j]);
+            printf("      %s%s\n", container[j], text2[j]);
+        }
     }
-    printf("\n===========================================================\n\n");
-
+    printf("\n");
+    line();
     fclose(F);
 
     strcpy(currentLocation,currentLocationHolder);
-    returned = 1;
-    viewStudentRecord();
-}
-
-void viewStudentAssessment(){
-    strcpy(currentLocationHolder, currentLocation);
-    
-    char temporary[X];
-    char text[X];
-    
-    snprintf(temporary, X, "%s/Student Assessments", currentLocation);
-    strcpy(currentLocation, temporary);
-    
-    FILE *f[10];
-
-    newPage();
-
-    for (int i = 0; i < 6; i++){
-        snprintf(temporary, X, "%s/%s", currentLocation, assessments[i]);
-
-        f[i] = fopen(temporary, "r");
-
-        printf("  \033[1m%s:\033[0m\n\n", assessments[i]);
-
-        int j = 1;
-
-        while (fgets(text, X, f[i]) != NULL) {
-            
-            text[strlen(text) - 1] = '\0';
-
-            if(j % 2 == 0){
-                printf("%s\n", text);
-            } else {
-                printf("    - %s: ", text);
-            }
-
-            j++;
-        }
-
-        fclose(f[i]);
-        strcpy(temporary, currentLocation);
-        printf("\n");
-    }
-
-    printf("===========================================================\n\n");
-    
-    strcpy(currentLocation, currentLocationHolder);
     returned = 1;
     viewStudentRecord();
 }
 
 void addStudentAssessment() {
     strcpy(currentLocationHolder, currentLocation);
-
-    char temporary5[X];
-
-    snprintf(temporary5, X, "%s/Students", courseLocation);
     
-    if(!hasFiles(temporary5)){
+    snprintf(currentLocation, X, "%s/Students", courseLocation);
+    
+    if(!hasFiles(currentLocation)){
         newPage();
-        printf("          \033[1;31mNo students available. Please add first.\033[0m\n\n");
-        printf("===========================================================\n\n");
+        printf("              %sNo students available. Please add one first.%s\n\n", r, c);
+        line();
         returned = 1;
         strcpy(currentLocation, currentLocationHolder);
         manageCourse();
     }
-
     newPage();
 
-    snprintf(currentLocation, X, "%s/Students", courseLocation);
-    printf("  \033[1mChoose the student to add an assessment for:\033[0m\n\n");
-    
+    printf("    %sChoose the %sstudent%s%s to add an %sassessment%s%s to:%s\n\n", B,b,c,B,b,c,B, c);
     directoryChoices(buffer);    
     enterYourChoice();
-
+    if ( choice < 1 || choice > directoryCount){
+        invalidInput();
+        returned = 1;
+        strcpy(currentLocation, currentLocationHolder);
+        manageCourse();
+    } 
     char studentLocation[X];
-
+    char studentName[X];
+    strcpy(studentName, buffer[choice - 1]);
     snprintf(studentLocation, X, "%s/%s", currentLocation, buffer[choice - 1]);
 
     if(!hasFiles(studentLocation)){
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
+        invalidInput();
+        returned = 1;
+        strcpy(currentLocation, currentLocationHolder);
+        manageCourse();
+    }
+    newPage();
+    printf("    %sChoose the %stype of assessment %s%syou want to %sadd%s%s:%s\n\n", B, b, c, B, b, c, B, c);
+
+    for (int i = 0; i < 6; i++) {
+        printf("      [%d] %s\n", i + 1, assessments[i]);
+    }
+    enterYourChoice();
+
+    if (choice < 1 || choice > 6) {
+        invalidInput();
         returned = 1;
         strcpy(currentLocation, currentLocationHolder);
         manageCourse();
     }
 
-    newPage();
-    printf("  \033[1mChoose the type of assessment to add:\033[0m\n\n");
+    snprintf(currentLocation, X, "%s/Assessments/%s.csv", courseLocation, assessments[choice - 1]);
 
-    for (int i = 0; i < 6; i++) {
-        printf("    [%d] %s\n", i + 1, assessments[i]);
-    }
+    FILE *file = fopen(currentLocation, "r");
 
-    enterYourChoice();
-
-    if (choice < 1 || choice > 6) {
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        returned = 1;
-        snprintf(currentLocation, X, "%s", currentLocationHolder);
-        manageCourse();
-    }
-
-    snprintf(currentLocation, X, "%s/Assessments/%s", courseLocation, assessments[choice - 1]);
-    FILE *F = fopen(currentLocation, "r");
-
-    char text[X][X];
     int lines = 0;
+    char text[X][X];
+    int number[X];
 
-    while (fgets(text[lines], X, F) != NULL) {
-        text[lines][strlen(text[lines]) - 1] = '\0';
+    fgets(garbage, X, file);
+
+    for (int i = 0; fscanf(file, "%[^;];%d\n", text[i], &number[i]) == 2; i++){
         lines++;
     }
+    fclose(file);
 
-    fclose(F);
-
-    if (lines == 0) {
+    if (lines < 1) {
         newPage();
-        printf("    \033[1;31mNo items in '%s'. Please add assessments first.\033[0m\n\n", assessments[choice - 1]);
-        printf("===========================================================\n\n");
+        if (choice == 4){
+            printf("      %sNo items found in %s. Please add one first.%s\n\n", r, assessments[choice - 1], c);
+        } else {
+            printf("          %sNo items found in %s. Please add one first.%s\n\n", r, assessments[choice - 1], c);
+        }
+        line();
         returned = 1;
-        snprintf(currentLocation, X, "%s", currentLocationHolder);
+        strcpy(currentLocation, currentLocationHolder);
         manageCourse();
     }
-
     newPage();
-    printf("  \033[1mWhich '%s' would you like to add a score for?\033[0m\n\n", assessments[choice - 1]);
+    printf("    %sChoose the %s%s%s%s you want to %sadd a score%s%s:%s\n\n", B, b,assessmentsSingular[choice - 1], c, B, b, c, B, c);
 
     for (int i = 0; i < lines; i++) {
-        if (i % 2 == 0) {
-            printf("    [%d] %s\n", i / 2 + 1, text[i]);
-        }
+        printf("      [%d] %s: %d\n", i + 1, text[i], number[i]);
     }
-
     int choiceOfList = choice;
-
     enterYourChoice();
 
-    if (choice < 1 || choice > lines / 2) {
-        newPage();
-        printf("             \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
+    if (choice < 1 || choice > lines) {
+        invalidInput();
         returned = 1;
-        snprintf(currentLocation, X, "%s", currentLocationHolder);
-        manageCourse();
-        return;
-    }
-
-    char studentAssessment[X];
-    int studentScore;
-
-    snprintf(studentAssessment, X, "%s", text[(choice - 1) * 2]);
-    printf("===========================================================\n");
-    printf("Enter the student score for '%s': ", studentAssessment);
-
-    int totalScore1 = atoi(text[(choice - 1) * 2 + 1]);
-
-    if (scanf("%d", &studentScore) != 1 || studentScore < 0 || studentScore > totalScore1) {
-        newPage();
-        printf("          \033[1;31mInvalid score. Must be between 0 and %d.\033[0m\n\n", totalScore1);
-        printf("===========================================================\n\n");
-        snprintf(currentLocation, X, "%s", currentLocationHolder);
-        returned = 1;
+        strcpy(currentLocation, currentLocationHolder);
         manageCourse();
     }
-
-    snprintf(currentLocation, X, "%s/Student Assessments/%s", studentLocation, assessments[choiceOfList - 1]);
-    
+    snprintf(currentLocation, X, "%s/Student Assessments/%s.csv", studentLocation, assessments[choiceOfList - 1]);
     FILE *F1 = fopen(currentLocation, "r");
-
-    char existingAssessment[X];
+    
     int alreadyAdded = 0;
+    char text2[X][X];
+    int number2[X];
 
-    while (fgets(existingAssessment, X, F1) != NULL) {
-        existingAssessment[strlen(existingAssessment) - 1] = '\0';
-        if (strcmp(existingAssessment, studentAssessment) == 0) {
+    fgets(garbage, X, F1);
+    for (int i = 0;fscanf(F1, "%[^;];%d\n", text2[i], &number[i]) == 2; i++){
+        if (strcmp(text2[i], text[choice - 1]) == 0) {
             alreadyAdded = 1;
             break;
         }
     }
-
     fclose(F1);
 
     if (alreadyAdded == 1) {
         newPage();
-        printf("      \033[1;31mThe item you will add has already been added.\033[0m\n\n");
-        printf("===========================================================\n\n");
+        printf("                   %sThe item has already been added.%s\n\n", r,c);
+        line();
+        strcpy(currentLocation, currentLocationHolder);
+        returned = 1;
+        manageCourse();
+    }
+    char studentAssessment[X];
+    int studentScore;
+
+    strcpy(studentAssessment, text[choice - 1]);
+    newPage();
+    printf("               %s------- %sAdding a Score to Student%s %s-------%s\n\n", B, b, c, B, c);
+    line();
+    printf("    %sStudent Name:%s %s\n",  b, c, studentName);
+    printf("    %s%s Name:%s %s\n", b,assessmentsSingular[choiceOfList -1], c, studentAssessment);
+    printf("    %sTotal Score:%s %d\n", b, c, number[choice -1]);
+    line1();
+    printf("%sEnter the score: %s", B, c);
+
+    if (scanf("%d", &studentScore) != 1 || studentScore < 0 || studentScore > number[choice -1 ]) {
+        newPage();
+        printf("            %sInvalid score. Must be between 0 and %d.%s\n\n", r, number[choice - 1], c);
+        line();
         strcpy(currentLocation, currentLocationHolder);
         returned = 1;
         manageCourse();
@@ -1802,97 +1514,182 @@ void addStudentAssessment() {
 
     FILE *F2 = fopen(currentLocation, "a");
 
-    fprintf(F2, "%s\n%d\n", studentAssessment, studentScore);
+    fprintf(F2, "%s;%d\n", text[choice - 1], studentScore);
     fclose(F2);
 
     newPage();
-    printf("   \033[1;32mAssessment '%s' added successfully!\033[0m\n\n", studentAssessment);
-    printf("===========================================================\n\n");
+    printf("    %sThe '%s: %d' was successfully added to the student.%s\n\n", g, studentAssessment, studentScore,c);
+    line();
 
-    snprintf(currentLocation, X, "%s", currentLocationHolder);
+    strcpy(currentLocation, currentLocationHolder);
     returned = 1;
     manageCourse();
 }
 
-void viewStudentGradeSummary() {
+void viewStudentRecord(){
     strcpy(currentLocationHolder, currentLocation);
-    
-    int sumOfEachAssessment[6] = {0}; 
-    int percentage[6] = {0}, lines = 0;
-    float studentPercentage[6] = {0};
-    float assessmentPercentage[6] = {0};
-    int sumStudentAssessment;
-    snprintf(currentLocation, X, "%s/Grading System Settings", courseLocation);
-    FILE *Fpercentage = fopen(currentLocation, "a+");
-    
-    for (int i = 0; i < 6; i++) {
-        fscanf(Fpercentage, "%d", &percentage[i]);
-    }
-
-
-    int totalScore[6] = {0};
-
-    for (int i = 0; i < 6; i++) {
-        snprintf(currentLocation, X, "%s/Assessments/%s", courseLocation, assessments[i]);
-        FILE *Fassessment = fopen(currentLocation, "r");
-        
-        char line[X];
-        int lineIndex = 0;
-
-        while (fgets(line, X, Fassessment) != NULL) {
-            line[strlen(line) - 1] = '\0'; 
-
-            if (lineIndex % 2 == 1) {
-                totalScore[i] += atoi(line);
-            }
-            lineIndex++;
+    if (returned == 1){
+        returned = 0;
+    } else {
+        strcpy(itemFolder, "record");
+        strcpy(itemLocation, "the student");
+        choose();
+        if (error == 1){
+            error = 0;
+            viewStudent();
         }
-        fclose(Fassessment);
+        newPage();
     }
+    printf("    %sChoose an option:%s\n\n", B, c);
+    printf("      [1] View Student Info\n");
+    printf("      [2] View Student Assessments\n");
+    printf("      [3] Remove Student Assessment\n");
+    printf("      [4] View Student Grade Overview\n");
+    printf("      [0] Go Back\n");
+    enterYourChoice();
     
-
-    for (int j = 0; j < 6; j++) {
-        sumStudentAssessment = 0;
-        int lines2 = 0;           
-
-        snprintf(currentLocation, X, "%s/Student Assessments/%s", currentLocationHolder, assessments[j]);
-        FILE *Fassessment = fopen(currentLocation, "r");
-
-        if (Fassessment != NULL) {
-            char text[X][X];
-            while (fgets(text[lines2], X, Fassessment) != NULL) {
-                text[lines2][strlen(text[lines2]) - 1] = '\0'; 
-                if (lines2 % 2 == 1) {
-                    sumStudentAssessment += atoi(text[lines2]);
-                }
-                lines2++;
-            }
-            fclose(Fassessment);
-        }
-
-        sumOfEachAssessment[j] = sumStudentAssessment;
-
-        if (totalScore[j] > 0) { 
-            studentPercentage[j] = ((float)sumOfEachAssessment[j] / (float)totalScore[j]) * percentage[j];
-            assessmentPercentage[j] = ((float)sumOfEachAssessment[j] / (float)totalScore[j]) * 100;
-        } else {
-            studentPercentage[j] = 0;
-        }
+    switch(choice){
+        case 1: viewStudentInfo(); break;
+        case 2: viewStudentAssessment(); break;
+        case 3: removeStudentAssessment(); break;
+        case 4: viewStudentCurrentGrade(); break;
+        case 0:
+            returned = 1;
+            newPage();
+            snprintf(currentLocation, X, "%s/Students", courseLocation);
+            viewStudent();
+        default:
+            invalidInput();
+            returned = 1;
+            strcpy(currentLocation, currentLocationHolder);
+            viewStudentRecord();
     }
+    returned = 1;
+    strcpy(currentLocation, currentLocationHolder);
+    viewStudentRecord();
+}
 
+void viewStudentAssessment(){
+    strcpy(currentLocationHolder, currentLocation);
+    char temporary[X];
+    char text[X];
+    int number;
+    
+    snprintf(temporary, X, "%s/Student Assessments", currentLocation);
+    strcpy(currentLocation, temporary);
+
+    FILE *f;
     newPage();
-    for (int j = 0; j < 6; j++) {
-        printf("     - \033[0;34m%s\033[0m score: %d/%d\n", assessments[j], sumOfEachAssessment[j], totalScore[j]);
-        printf("       Grade percentage: %.2f%%\n\n", assessmentPercentage[j]);
-    }
+    int l = 0;
+    for (int i = 0; i < 6; i++){
+        snprintf(temporary, X, "%s/%s.csv", currentLocation, assessments[i]);
 
+        f = fopen(temporary, "r");
+        fgets(garbage, X, f);
+        int k = 0;
+        while (fgets(text, X, f) != NULL) {
+            k++;
+        }
+        fclose(f);
+        if (k < 1) {
+            continue;
+        }
+        f = fopen(temporary, "r");
+
+        printf("    %s%s:%s\n\n", B, assessments[i],c);
+        fgets(garbage, X, f);
+        for (int j = 1; fscanf(f, "%[^;];%d\n", text, &number) == 2; j++) {
+            printf("      - %s: %d\n", text, number);
+        }
+        fclose(f);
+        strcpy(temporary, currentLocation);
+        printf("\n");
+        l++;
+    }
+    if (l < 1){
+        printf("            %sNo assessments available. Please add one first.%s\n\n", r,c);
+    }
+    line();
+    
+    strcpy(currentLocation, currentLocationHolder);
+    returned = 1;
+    viewStudentRecord();
+}
+
+void viewStudentCurrentGrade() {
+    strcpy(currentLocationHolder, currentLocation);
+    int sumOfEachAssessment[6] = {0}, percentage[6]= {0}, totalScore[6]= {0}, exist = 0;
+    float studentPercentage[6]= {0}, assessmentPercentage[6]= {0};
+
+    snprintf(currentLocation, X, "%s/Grading System Settings.csv", courseLocation);
+    FILE *file = fopen(currentLocation, "r");
+    fgets(garbage, X, file);
+    for (int i = 0; i < 6; i++) {
+        fscanf(file, "%[^;];%d\n", garbage, &percentage[i]);
+    }
+    fclose(file);
+
+    for (int i = 0; i < 6; i++) {
+        snprintf(currentLocation, X, "%s/Assessments/%s.csv", courseLocation, assessments[i]);
+        FILE *file = fopen(currentLocation, "r");
+        char activity[X];
+        int score;
+        fgets(garbage, X, file);
+        while (fscanf(file, "%[^;];%d\n", activity, &score) == 2) {
+            exist++;
+            totalScore[i] += score;
+        }
+        fclose(file);
+    }
+    newPage();
+    if (exist == 0){
+        newPage();
+        printf("               %sNo assessments available. Please add first.%s\n\n", r, c);
+        line();
+        line();
+        returned = 1;
+        strcpy(currentLocation, currentLocationHolder);
+        viewStudentRecord();
+    }
+    printf("    %sStudent Grade Overview:%s\n\n", B,c);
+    for (int i = 0; i < 6; i++) {
+
+        snprintf(currentLocation, X, "%s/Student Assessments/%s.csv", currentLocationHolder, assessments[i]);
+        FILE *file = fopen(currentLocation, "r");
+        char activity[X];
+        int score;
+        fgets(garbage, X, file);
+        while (fscanf(file, "%[^;];%d\n", activity, &score) == 2) {
+            sumOfEachAssessment[i] += score;
+            
+        }
+        fclose(file);
+
+        if (totalScore[i] > 0) {
+            studentPercentage[i] = ((float)sumOfEachAssessment[i] / (float)totalScore[i]) * (float)percentage[i];
+            assessmentPercentage[i] = ((float)sumOfEachAssessment[i] / (float)totalScore[i]) * 100;
+        } else {
+            studentPercentage[i] = 0;
+            assessmentPercentage[i] = 0;
+        }
+        if (totalScore[i] == 0){
+            continue;
+        }
+        snprintf(currentLocation, X, "%s/Student Current Grade.csv", currentLocationHolder);
+        file = fopen(currentLocation, "w");
+        fprintf(file, "Assessment Type;Student Scores;Total Scores;Grading System Percentage\n");
+        fprintf(file, "%s;%d;%d;%.2f\n", assessments[i], sumOfEachAssessment[i], totalScore[i], studentPercentage[i]);
+        fclose(file);
+        printf("       %s%s%s\n         - Score: %d/%d\n", b, assessments[i], c, sumOfEachAssessment[i], totalScore[i]);
+        printf("         - Percentage: %.2f%%\n\n", assessmentPercentage[i]);
+    }
     float initialGrade = 0;
-    for (int j = 0; j < 6; j++) {
-            initialGrade += studentPercentage[j];
+    for (int i = 0; i < 6; i++) {
+        initialGrade += studentPercentage[i];
     }
+    printf("    %sStudent Current Grade:%s %.2f\n\n", B, c, initialGrade);
+    line();
 
-    printf("     - \033[0;34mInitial grade\033[0m: %.2f%%\n", initialGrade);
-    printf("\n===========================================================\n\n");
     returned = 1;
     strcpy(currentLocation, currentLocationHolder);
     viewStudentRecord();
@@ -1900,98 +1697,87 @@ void viewStudentGradeSummary() {
 
 void viewStudentGradeCourse() {
     strcpy(currentLocationHolder, currentLocation);
-    
     int sumOfEachAssessment[6] = {0};
-    int percentage[6] = {0}, lines = 0;
+    int percentage[6] = {0};
+    int totalScore[6] = {0};
     float studentPercentage[6] = {0};
-    int sumStudentAssessment;
 
-    snprintf(currentLocation, X, "%s/Grading System Settings", courseLocation);
-    FILE *Fpercentage = fopen(currentLocation, "r");
-   
+    snprintf(currentLocation, X, "%s/Grading System Settings.csv", courseLocation);
+    FILE *file = fopen(currentLocation, "r");
+    fgets(garbage, X, file);
+
     for (int i = 0; i < 6; i++) {
-        fscanf(Fpercentage, "%d", &percentage[i]);
+        fscanf(file, "%[^;];%d\n", garbage, &percentage[i]);
     }
-    
-    snprintf(currentLocation, X, "%s/Students", courseLocation);
+    fclose(file);
 
-    DIR *temporary = opendir(currentLocation);
+    for (int i = 0; i < 6; i++) {
+        snprintf(currentLocation, X, "%s/Assessments/%s.csv", courseLocation, assessments[i]);
+        file = fopen(currentLocation, "r");
+        char activity[X];
+        int score;
+        fgets(garbage, X, file);
+        while (fscanf(file, "%[^;];%d\n", activity, &score) == 2) {
+            totalScore[i] += score;
+        }
+        fclose(file);
+    }
+    snprintf(currentLocation, X, "%s/Students", courseLocation);
+    DIR *directory = opendir(currentLocation);
 
     struct dirent *entry;
     char studentNames[X][X];
-    int studentCount = 0;
+    int count = 0;
 
-    while ((entry = readdir(temporary)) != NULL) {
+    while ((entry = readdir(directory)) != NULL) {
         if (entry->d_name[0] != '.') {
-            snprintf(studentNames[studentCount], X, "%s", entry->d_name);
-            studentNames[studentCount][sizeof(studentNames[studentCount]) - 1] = '\0';
-            studentCount++;
+            snprintf(studentNames[count], X, "%s", entry->d_name);
+            studentNames[count][sizeof(studentNames[count]) - 1] = '\0';
+            count++;
         }
     }
+    closedir(directory);
 
-    int totalScore[6] = {0};
-
-    for (int i = 0; i < 6; i++) {
-        snprintf(currentLocation, X, "%s/Assessments/%s", courseLocation, assessments[i]);
-        FILE *Fassessment = fopen(currentLocation, "r");
-        
-        char line[X];
-        int lineIndex = 0;
-
-        while (fgets(line, X, Fassessment) != NULL) {
-            line[strlen(line) - 1] = '\0';
-
-            if (lineIndex % 2 == 1) {
-                totalScore[i] += atoi(line);
-            }
-            lineIndex++;
-        }
-        fclose(Fassessment);
-    }
-    
-    closedir(temporary);
     newPage();
-    printf("  \033[1mStudent initial grade:\033[0m\n\n");
-    for (int i = 0; i < studentCount; i++) {
+    printf("    %sStudents Current Grade:%s\n\n", B,c);
 
+    float initialGrade[X];
+
+    for (int i = 0; i < count; i++) {
         for (int j = 0; j < 6; j++) {
-            sumStudentAssessment = 0;
-            int lines2 = 0;           
+            int sumStudentAssessment = 0;
 
-            snprintf(currentLocation, X, "%s/Students/%s/Student Assessments/%s", courseLocation, studentNames[i], assessments[j]);
-            FILE *Fassessment = fopen(currentLocation, "r");
+            snprintf(currentLocation, X, "%s/Students/%s/Student Assessments/%s.csv", courseLocation, studentNames[i], assessments[j]);
+            file = fopen(currentLocation, "r");
 
-            
-            char text[X][X];
-            while (fgets(text[lines2], X, Fassessment) != NULL) {
-                text[lines2][strlen(text[lines2]) - 1] = '\0'; // Remove newline
-                if (lines2 % 2 == 1) { // Only process score lines
-                    sumStudentAssessment += atoi(text[lines2]);
-                }
-                lines2++;
+            char activity[X];
+            int score;
+            fgets(garbage, X, file);
+            while (fscanf(file, "%[^;];%d\n", activity, &score) == 2) {
+                sumStudentAssessment += score;
             }
-
-            fclose(Fassessment);
-        
+            fclose(file);
+            
             sumOfEachAssessment[j] = sumStudentAssessment;
 
-            if (totalScore[j] > 0) { 
-                studentPercentage[j] = ((float)sumOfEachAssessment[j] / (float)totalScore[j]) * percentage[j];
+            if (totalScore[j] > 0) {
+                studentPercentage[j] = ((float)sumOfEachAssessment[j] / totalScore[j]) * percentage[j];
             } else {
                 studentPercentage[j] = 0;
             }
-            
+            initialGrade[i] += studentPercentage[j];
         }
-
-        float initialGrade = 0;
-        for (int j = 0; j < 6; j++) {
-            initialGrade += studentPercentage[j];
-        }
-        
-        printf("    - %s - %.2f%%\n", studentNames[i], initialGrade);
+        printf("      - %s - %.2f\n", studentNames[i], initialGrade[i]);
     }
-    
-    printf("\n===========================================================\n\n");
+    snprintf(currentLocation, X, "%s/Students Current Grade.csv", courseLocation);
+    file = fopen(currentLocation, "w");
+    fprintf(file, "Students;Current Grade\n");
+    for (int i = 0; i < count; i++) {
+        fprintf(file, "%s;%.2f\n", studentNames[i], initialGrade[i]);
+    }
+    fclose(file);
+    printf("\n");
+    line();
     returned = 1;
     strcpy(currentLocation, currentLocationHolder);
     viewStudent();
@@ -1999,161 +1785,118 @@ void viewStudentGradeCourse() {
 
 void removeStudentAssessment() {
     strcpy(currentLocationHolder, currentLocation);
-
     newPage();
-    printf("  \033[1mChoose the type of assessment to remove:\033[0m\n\n");
+    printf("    %sChoose the %stype of assessment %s%syou want to %sremove%s%s:%s\n\n", B, b,c,B,b,c,B,c);
     for (int i = 0; i < 6; i++) {
-        printf("    [%d] %s\n", i + 1, assessments[i]);
+        printf("      [%d] %s\n", i + 1, assessments[i]);
     }
-
     enterYourChoice();
 
+    int choice1 = choice;
     if (choice < 1 || choice > 6) {
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
+        invalidInput();
         returned = 1;
-        snprintf(currentLocation, X, "%s", currentLocationHolder);
+        strcpy(currentLocation, currentLocationHolder);
         viewStudentRecord();
-        return;
     }
-
     char temporary[X];
     snprintf(temporary, X, "%s/Student Assessments", currentLocation);
     mkdir(temporary);
 
-    if (!hasFiles(temporary)) {
-        newPage();
-        printf("              \033[1;31mNo assessment files found.\033[0m\n\n");
-        printf("===========================================================\n\n");
-        returned = 1;
-        snprintf(currentLocation, 255, "%s", currentLocationHolder);
-        viewStudentRecord();
-    }
-
     char temporary1[X];
     
-    snprintf(currentLocation, X, "%s/%s", temporary, assessments[choice - 1]);
+    snprintf(currentLocation, X, "%s/%s.csv", temporary, assessments[choice - 1]);
     strcpy(temporary1, assessments[choice - 1]);
     FILE *F = fopen(currentLocation, "r");
 
     char text[X][X];
+    int number[X];
     int lines = 0;
-
-    while (fgets(text[lines], X, F) != NULL) {
-        text[lines][strlen(text[lines]) - 1] = '\0';
+    fgets(garbage, X, F);
+    for(int i = 0; fscanf(F, "%[^;];%d\n", text[i], &number[i]) == 2; i++) {
         lines++;
     }
-
-    fclose(F);
-
-    while (fgets(text[lines], X, F) != NULL) {
-        text[lines][strlen(text[lines]) - 1] = '\0';
-        lines++;
-    }
-
     fclose(F);
 
     if (lines < 1){
         newPage();
-        printf("        \033[1;31mThere's no item available. Please add first.\033[0m\n\n");
-        printf("===========================================================\n\n");
+        if (choice == 4){
+            printf("      %sNo items found in %s. Please add one first.%s\n\n", r, assessments[choice - 1], c);
+        } else {
+            printf("          %sNo items found in %s. Please add one first.%s\n\n", r, assessments[choice - 1], c);
+        }
+        line();
         returned = 1;
-        snprintf(currentLocation, 255, "%s", currentLocationHolder);
+        strcpy(currentLocation, currentLocationHolder);
         viewStudentRecord();
     }
-
     newPage();
-    printf("\n  \033[1mWhich assessment would you like to remove?\033[0m \n");
-    printf("\n    \033[1mExisting assessments for '%s':\n\n\033[0m", assessments[choice - 1]);
-    for (int i = 0; i < lines; i += 2) { 
-        printf("      [%d] %s\n", (i / 2) + 1, text[i]);
+    printf("    %sChoose the item in %s%s%s %syou want to %sremove%s%s:%s\n\n",  B, b, assessments[choice -1], c, B, b,c,B,c);
+    for (int i = 0; i < lines; i++) { 
+        printf("      [%d] %s: %d\n", i + 1, text[i], number[i]);
     }
-    
     enterYourChoice();
-
-    if (choice < 1 || choice > lines / 2) {
-        newPage();
-        printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-        printf("===========================================================\n\n");
+    
+    if (choice < 1 || choice > lines) {
+        invalidInput();
         returned = 1;
-        snprintf(currentLocation, 255, "%s", currentLocationHolder);
-        viewCourse();
+        strcpy(currentLocation, currentLocationHolder);
+        viewStudentRecord();
     }
-
+    for (int i = choice - 1; i < lines - 1; i++) {
+        strcpy(text[i], text[i + 1]);
+        number[i] = number[i + 1];
+    }
+    lines--;
     FILE *F1 = fopen(currentLocation, "w");
 
+    fprintf(F1, "%s;Scores\n", assessments[choice1 - 1]);
     for (int i = 0; i < lines; i++) {
-        if (i != (choice - 1) * 2 && i != (choice - 1) * 2 + 1) { 
-            fprintf(F1, "%s\n", text[i]);
-        }
+        fprintf(F1, "%s;%d\n", text[i], number[i]);
     }
-
     fclose(F1);
 
     newPage();
-    printf("                \033[1;32mAssessment removed successfully!\033[0m\n");
-    printf("===========================================================\n\n");
-    snprintf(currentLocation, 255, "%s", currentLocationHolder);
+    printf("    %sThe %s '%s' was successfully removed.%s\n\n", g, assessmentsSingular[choice1 - 1],text[choice - 1], c);
+    line();
+    strcpy(currentLocation, currentLocationHolder);
     returned = 1;
     viewStudentRecord();
 }
 
 /* =================================================================================================================
-                                      GRADING SYSTEM SETTINGS CURRENT LOCATION
+                                            GRADING SYSTEM SETTINGS
    ================================================================================================================= */
 
 void viewGradingSystemSettings() {
     strcpy(currentLocationHolder, currentLocation);
-
+    snprintf(currentLocation, X, "%s/Grading System Settings.csv", courseLocation);
+    const char assessments2[][X] = {"Activities         ", "Assignments        ", "Exams              ", "Performance Tasks  ", "Projects           ", "Quizzes            "};
     if(returned == 1){
         returned = 0;
     } else {
         newPage();
-        snprintf(currentLocation, X, "%s/Grading System Settings", courseLocation);
-
-        FILE *F1 = fopen(currentLocation, "r");
-
-        if (F1 == NULL) {
-            FILE *F2 = fopen(currentLocation, "a");
-            fprintf(F2, "10\n10\n10\n10\n30\n30\n");
-            fclose(F2);
-        } else {
-            fclose(F1);
-        }
-
-        int percentages[6];
-        int lines = 0;
-        char text[X][X];  
-
+        int percentage[6];
+        char text[X]; 
         FILE *F3 = fopen(currentLocation, "r");
-        
-        for (int i = 0; fgets(text[lines], X, F3) != NULL ; i++) {
-            text[lines][strlen(text[lines]) - 1] = '\0';
-            lines++;
+        fgets(garbage, X, F3);
+        for(int i = 0; i < 6; i++){
+            (fscanf(F3, "%[^;];%d\n", text, &percentage[i]));
         }
-
-        for (int i = 0; i < lines; i++) {
-            percentages[i] = atoi(text[i]);
-        }
-
         fclose(F3);
 
-        printf("              \033[1;34mViewing Grading System Settings\033[0m\n\n");
-        printf("===========================================================\n\n");
-
-        printf("  \033[1mCurrent Grading System Settings:\033[0m\n\n");
-
+        printf("    %sCurrent Grading System Settings:%s\n\n", B, c);
+        
         for (int i = 0; i < 6; i++) {
-            printf("    - %s: %d%%\n", assessments[i], percentages[i]);
+            printf("      %s: %d%s%%%s\n", assessments2[i], percentage[i], b, c);
         }
-        printf("\n===========================================================\n\n");
+        line1();
     }
- 
-    printf("  \033[1mChoose an option: \033[0m\n\n");
-    printf("    [1] Edit Grading System Settings\n");
-    printf("    [0] Back\n");
     
+    printf("\n    %sChoose an option: %s\n\n", B, c);
+    printf("      [1] Edit Grading System Settings\n");
+    printf("      [0] Back\n");
+
     enterYourChoice();
 
     switch(choice){
@@ -2164,14 +1907,12 @@ void viewGradingSystemSettings() {
             returned = 1;
             newPage();
             manageCourse();
+            break;
         default:
-            newPage();
-            printf("              \033[1;31mInvalid input. Please try again.\033[0m\n\n");
-            printf("===========================================================\n\n");
+            invalidInput();
             returned = 1;
             viewGradingSystemSettings();
     }
-
     strcpy(currentLocation, currentLocationHolder);
     returned = 1;
     manageCourse();
@@ -2182,44 +1923,37 @@ void editGradingSystemSettings() {
 
     int percentages[6];
     newPage();
-    
-    printf("              \033[1;34mEditing Grading System Settings\033[0m\n\n");
-    printf("===========================================================\n\n");
-    printf("  \033[1mEnter the percentage for each assessment type:\033[0m\n\n");
+    printf("            %s------- %sEditing Grading System Settings %s%s-------%s\n\n",B, b, c, B, c);
+    line();
+    printf("    %sEnter the %spercentage%s %sfor each %sassessent type%s%s:%s\n\n", B, b, c, B, b, c, B,c);
 
     int totalPercentage = 0;
     
     for (int i = 0; i < 6; i++) {
-        printf("    %s: ", assessments[i]);
+        printf("      %s: ", assessmentsSingular[i]);
         if (scanf("%d", &percentages[i]) != 1) {
-            if (percentages[i] < 0 || percentages[i] > 100){
-                scanf(" %[^\n]", garbage );
-               break;
-            }
+            scanf(" %[^\n]", garbage);
+            break;
+        } else if (percentages[i] < 0 || percentages[i] > 100){
+            break;
         }
         totalPercentage += percentages[i];
     }
-
     if (totalPercentage != 100) {
         newPage();
-        printf("     \033[1;31mInvalid input. The total percentage must be equal to 100%%.\033[0m\n\n");
-        printf("===========================================================\n\n");
+        printf("              %sThe total percentage must be equal to 100%%.%s\n\n",r, c);
+        line();
         returned = 1;
-        snprintf(currentLocation, 255, "%s", currentLocationHolder);
+        strcpy(currentLocation, currentLocationHolder);
         viewGradingSystemSettings();
     } 
-
-    snprintf(currentLocation, 255, "%s/Grading System Settings", courseLocation);
-
+    snprintf(currentLocation, X, "%s/Grading System Settings.csv", courseLocation);
     FILE *F1 = fopen(currentLocation, "w");
-
+    fprintf(F1, "Assessment Type;Percentage\n");
     for (int i = 0; i < 6; i++) {
-        fprintf(F1, "%d\n", percentages[i]);
+        fprintf(F1, "%s;%d\n", assessmentsSingular[i], percentages[i]);
     }
-    
     fclose(F1);
-
     strcpy(currentLocation, currentLocationHolder);
-
     viewGradingSystemSettings();
 }
